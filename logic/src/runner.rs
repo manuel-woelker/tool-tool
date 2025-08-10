@@ -1,5 +1,5 @@
-use crate::TOOL_TOOL_VERSION;
 use crate::adapter::Adapter;
+use crate::version::get_version;
 use tool_tool_base::result::ToolToolResult;
 
 pub struct ToolToolRunner {
@@ -21,7 +21,7 @@ impl ToolToolRunner {
                     self.adapter.print("help");
                 }
                 "--version" => {
-                    self.adapter.print(&format!("{TOOL_TOOL_VERSION}\n"));
+                    self.adapter.print(&format!("{}\n", get_version()));
                 }
                 other => {
                     self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
@@ -35,9 +35,9 @@ impl ToolToolRunner {
 
 #[cfg(test)]
 mod tests {
-    use crate::TOOL_TOOL_VERSION;
     use crate::mock_adapter::MockAdapter;
     use crate::runner::ToolToolRunner;
+    use crate::version::get_version;
     use expect_test::expect;
     use tool_tool_base::result::ToolToolResult;
 
@@ -68,7 +68,7 @@ mod tests {
 
         assert_eq!(
             adapter.get_effects(),
-            format!("PRINT:\n\t{}\n\n", TOOL_TOOL_VERSION)
+            format!("PRINT:\n\t{}\n\n", get_version())
         );
         Ok(())
     }
