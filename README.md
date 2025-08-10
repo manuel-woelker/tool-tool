@@ -30,13 +30,15 @@ A sample yarn invocation:
 tt yarn install
 ```
 
-Sample `.tool-tool.v1.yaml`
+Sample `.tool-tool.v2.kdl`
 
-```
-tools:
-    - name: lsd
-      version: 0.17.0
-      download:
-        linux: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz
-        windows: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip
+```kdl
+tools {
+    lsd "0.17.0" {
+      download {
+        linux https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz
+        windows https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip
+      }
+    }
+}
 ```
