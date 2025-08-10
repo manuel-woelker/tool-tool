@@ -49,6 +49,7 @@ version = "0.2.0"
 dependencies = [
  "expect-test",
  "indent",
+ "tool-tool-base",
 ]
 
 [[package]]
