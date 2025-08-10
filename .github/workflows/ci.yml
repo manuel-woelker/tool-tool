@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.86.0
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.8
+      - name: Cargo version
+        run: cargo --version
+      - name: Build
+        run: cargo build
+  test:
+    runs-on: ubuntu-24.04
+    env:
+      RUSTFLAGS: "-Cinstrument-coverage"
+      LLVM_PROFILE_FILE: "test-%p-%m.profraw"
+      RUST_BACKTRACE: 1 # to enable backtraces in result error messages
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full clone for unit test in git_info.rs to get the correct last modification date
+      - uses: dtolnay/rust-toolchain@1.86.0
+        with:
+          components: llvm-tools
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.8
+      - name: Run tests
+        run: cargo test --all-features --locked
+      - name: list profraw files
+        run: find . -name '*.profraw'
+      - name: Download grcov
+        run: |
+          set -eux;
+          mkdir -p "${HOME}/.local/bin"
+          curl -sL https://github.com/mozilla/grcov/releases/download/v0.10.0/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: grcov
+        id: coverage
+        run: |
+          set -eux;
+          grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o ./lcov.info
+          echo "report=./lcov.info" >> $GITHUB_OUTPUT
+      - name: Codecov
+        # You may pin to the exact commit or the version.
+        # uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          # Repository upload token - get it from codecov.io. Required only for private repositories
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: manuel-woelker/tool-tool          # Specify whether the Codecov output should be verbose
+          files: ${{ steps.coverage.outputs.report }}
+          flags: rust
+          verbose: true
+          fail_ci_if_error: true
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.86.0
+        with:
+          components: rustfmt
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.8
+      - name: rustfmt version
+        run: cargo fmt --version
+      - name: Check formatting
+        run: cargo fmt --check
+  clippy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.86.0
+        with:
+          components: clippy
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.7.8
+      - name: clippy version
+        run: cargo clippy --version
+      - name: Check clippy
+        run: cargo clippy --all -- -D warnings
