@@ -1,0 +1,18 @@
+[workspace]
+resolver = "3"
+members = ["real_adapter", "base", "logic"]
+
+[workspace.dependencies]
+anyhow = "1.0.98"
+
+
+[profile.dev.package."*"]
+# Set the default for dependencies in Development mode.
+opt-level = 3
+
+[profile.dev]
+# Turn on a small amount of optimization in Development mode.
+opt-level = 0
+lto = false
+#debug = false
+

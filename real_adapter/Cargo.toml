@@ -1,0 +1,8 @@
+[package]
+name = "tool-tool-real_adapter"
+version = "0.2.0"
+edition = "2024"
+
+[dependencies]
+tool-tool-base = {path = "../base"}
+tool-tool-logic = {path = "../logic"}
