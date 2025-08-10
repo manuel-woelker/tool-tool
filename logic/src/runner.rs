@@ -15,7 +15,7 @@ impl ToolToolRunner {
 
     pub fn run(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.get_args();
-        for arg in args {
+        for arg in args.iter().skip(1) {
             match arg.as_str() {
                 "--help" => {
                     self.adapter.print("help");

@@ -40,7 +40,9 @@ impl MockAdapter {
     }
 
     pub fn set_args(&self, args: &[&str]) {
-        self.write().args = args.iter().map(|s| s.to_string()).collect();
+        let mut all_args = vec!["./tool-tool.exe".to_string()];
+        all_args.extend(args.iter().map(|s| s.to_string()));
+        self.write().args = all_args;
     }
 
     pub fn verify_effects(&self, expected: Expect) {

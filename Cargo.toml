@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["real_adapter", "base", "logic"]
+members = ["base", "logic", "real_adapter", "cli"]
 
 [workspace.dependencies]
 anyhow = "1.0.98"
