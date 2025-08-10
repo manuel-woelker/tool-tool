@@ -4,6 +4,8 @@ version = "0.2.0"
 edition = "2024"
 
 [dependencies]
+kdl = "6.3.4"
+miette = { version = "7.6.0", features = ["fancy"] }
 tool-tool-base = {path = "../base"}
 
 [dev-dependencies]

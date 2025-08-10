@@ -1,4 +1,5 @@
 use crate::adapter::Adapter;
+use crate::configuration::parse_configuration_from_kdl;
 use crate::version::get_version;
 use tool_tool_base::result::ToolToolResult;
 
@@ -15,6 +16,8 @@ impl ToolToolRunner {
 
     pub fn run(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.get_args();
+        //parse_configuration_from_kdl("")?;
+        parse_configuration_from_kdl(".tool-tool.v2.kdl", "")?;
         for arg in args.iter().skip(1) {
             match arg.as_str() {
                 "--help" => {

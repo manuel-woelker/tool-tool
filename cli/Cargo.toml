@@ -2,6 +2,7 @@
 name = "tool-tool"
 version = "0.2.0"
 edition = "2024"
+rust-version = "1.86.0"
 
 [dependencies]
 tool-tool-base = {path = "../base"}
