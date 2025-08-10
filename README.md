@@ -1,14 +1,14 @@
 # 🛠 tool-tool
 
-tool-tool - a light-weight meta-tool to version and install tool dependencies for your software projects
+tool-tool - a light-weight meta-tool to version and install tool dependencies for your software development projects
 
 [![Crates.io](https://img.shields.io/crates/v/tool-tool.svg)](https://crates.io/crates/tool-tool)
-[![pipeline status](https://gitlab.com/manuelwoelker/tool-tool/badges/master/pipeline.svg)](https://gitlab.com/manuelwoelker/tool-tool/-/commits/master)
-[![coverage report](https://gitlab.com/manuelwoelker/tool-tool/badges/master/coverage.svg)](https://gitlab.com/manuelwoelker/tool-tool/-/commits/master)
+[![CI](https://github.com/manuel-woelker/tool-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/manuel-woelker/tool-tool/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/manuel-woelker/tool-tool/graph/badge.svg?token=D56LGK8CU0)](https://codecov.io/gh/manuel-woelker/tool-tool)
 
 **WARNING**: Work in progress - comments, contributions and feedback welcome
 
-tool-tool is simple way to automatically manage a project's tool dependencies. This ensures that all contributers and CI systems are
+tool-tool is a simple solution to automatically manage a project's tool dependencies. This ensures that all contributors and CI systems are
 using the right tools with the proper version, without having to hunt them down manually.
 
 You should never have to worry about:
