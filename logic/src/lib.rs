@@ -3,4 +3,5 @@ pub mod configuration;
 #[cfg(test)]
 mod mock_adapter;
 pub mod runner;
+pub mod types;
 pub mod version;

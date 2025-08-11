@@ -1,7 +1,9 @@
 use crate::adapter::Adapter;
+use crate::types::FilePath;
 use expect_test::Expect;
 use indent::indent_all_with;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use tool_tool_base::result::ToolToolResult;
 
 #[derive(Clone)]
 pub struct MockAdapter {
@@ -9,6 +11,7 @@ pub struct MockAdapter {
 }
 
 struct MockAdapterInner {
+    configuration_string: String,
     args: Vec<String>,
     effects_string: String,
 }
@@ -18,6 +21,16 @@ impl MockAdapter {
         Self {
             inner: Arc::new(RwLock::new(MockAdapterInner {
                 args: Vec::new(),
+                configuration_string: r#"
+                    tools {
+                        lsd "0.17.0" {
+                            download {
+                                linux "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz"
+                                windows "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip"
+                            }
+                       }
+                    }
+                       "#.to_string(),
                 effects_string: String::new(),
             })),
         }
@@ -37,6 +50,7 @@ impl MockAdapter {
 
     fn log_effect(&self, effect: impl AsRef<str>) {
         self.write().effects_string.push_str(effect.as_ref());
+        self.write().effects_string.push('\n');
     }
 
     pub fn set_args(&self, args: &[&str]) {
@@ -55,16 +69,21 @@ impl MockAdapter {
 }
 
 impl Adapter for MockAdapter {
-    fn get_args(&self) -> Vec<String> {
+    fn args(&self) -> Vec<String> {
         self.read().args.clone()
     }
 
     fn print(&self, message: &str) {
-        self.log_effect(format!("PRINT:\n{}\n", indent_all_with("\t", message)));
+        self.log_effect(format!("PRINT:\n{}", indent_all_with("\t", message)));
+    }
+
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<String> {
+        self.log_effect(format!("READ FILE: {path}"));
+        Ok(self.read().configuration_string.clone())
     }
 
     fn exit(&self, exit_code: i32) {
-        self.log_effect(format!("EXIT: {}\n", exit_code));
+        self.log_effect(format!("EXIT: {}", exit_code));
     }
 }
 

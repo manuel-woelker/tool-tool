@@ -1,6 +1,8 @@
 use std::env;
 use std::fmt::Debug;
+use tool_tool_base::result::ToolToolResult;
 use tool_tool_logic::adapter::Adapter;
+use tool_tool_logic::types::FilePath;
 
 pub struct RealAdapter {}
 
@@ -17,12 +19,16 @@ impl Default for RealAdapter {
 }
 
 impl Adapter for RealAdapter {
-    fn get_args(&self) -> Vec<String> {
+    fn args(&self) -> Vec<String> {
         env::args().collect()
     }
 
     fn print(&self, message: &str) {
         eprintln!("{message}");
+    }
+
+    fn read_file(&self, _path: &FilePath) -> ToolToolResult<String> {
+        todo!()
     }
 
     fn exit(&self, exit_code: i32) {
