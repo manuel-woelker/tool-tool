@@ -25,8 +25,16 @@ impl MockAdapter {
                     tools {
                         lsd "0.17.0" {
                             download {
-                                linux "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz"
-                                windows "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip"
+                                linux "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-unknown-linux-gnu.tar.gz"
+                                windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
+                            }
+                            commands {
+                                foobar "echo foobar"
+                                bar "echo bar"
+                            }
+                            env {
+                                FROBNIZZ "nizzle"
+                                FIZZ "buzz"
                             }
                        }
                     }
