@@ -3,7 +3,7 @@ resolver = "3"
 members = ["base", "logic", "real_adapter", "cli"]
 
 [workspace.dependencies]
-anyhow = "1.0.98"
+miette = { version = "7.6.0", features = ["fancy"] }
 
 
 [profile.dev.package."*"]

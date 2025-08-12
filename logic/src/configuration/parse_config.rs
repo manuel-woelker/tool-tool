@@ -1,49 +1,54 @@
 use crate::configuration::platform::DownloadPlatform;
 use crate::configuration::{ToolConfiguration, ToolToolConfiguration};
 use kdl::{KdlDocument, KdlNode};
-use miette::{GraphicalReportHandler, GraphicalTheme};
+use miette::{LabeledSpan, Severity, miette};
 use std::collections::BTreeMap;
 use std::str::FromStr;
-use tool_tool_base::result::{Context, ToolToolResult, bail};
+use tool_tool_base::result::{Context, ToolToolResult, bail, err};
 
 pub fn parse_configuration_from_kdl(
     filename: &str,
     kdl: &str,
 ) -> ToolToolResult<ToolToolConfiguration> {
-    let mut tools = vec![];
-    let result = kdl.parse::<KdlDocument>();
-    let result = match result {
-        Err(mut err) => {
-            let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode());
-            let mut message = String::new();
-            for diag in &mut err.diagnostics {
-                handler.render_report(&mut message, diag)?;
-            }
-            return Err(err).context(format!("Failed to parse KDL file {filename}:\n{message}"));
-        }
-        Ok(result) => result,
-    };
-    let doc: KdlDocument = result;
-    for document_node in doc.nodes() {
-        match document_node.name().value() {
-            "tools" => {
-                for tool_node in children(document_node) {
-                    let tool = parse_tool(tool_node)?;
-                    tools.push(tool);
+    (|| {
+        let mut tools = vec![];
+        let result = kdl.parse::<KdlDocument>()?;
+        let doc: KdlDocument = result;
+        for document_node in doc.nodes() {
+            match document_node.name().value() {
+                "tools" => {
+                    for tool_node in children(document_node) {
+                        let tool = parse_tool(tool_node)?;
+                        tools.push(tool);
+                    }
+                }
+                other => {
+                    let report = miette!(
+                        code = "configuration::parse_config::parse_kdl".to_string(),
+                        severity = Severity::Error,
+                        labels = vec![LabeledSpan::new_primary_with_span(
+                            Some("unexpected".to_string()),
+                            document_node.span()
+                        )],
+                        help = "Valid top level items are: 'tools'",
+                        "Unexpected top-level item: '{other}'"
+                    )
+                    .with_source_code(kdl.to_string());
+                    return Err(report);
                 }
             }
-            _ => continue,
         }
-    }
-    let configuration = ToolToolConfiguration { tools };
-    Ok(configuration)
+        let configuration = ToolToolConfiguration { tools };
+        Ok(configuration)
+    })()
+    .with_context(|| format!("Failed to parse KDL file '{filename}'"))
 }
 
 fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
     let name = tool_node.name().value().to_string();
     let version = tool_node
         .entry(0)
-        .expect("Expected tool version")
+        .ok_or_else(|| err!("Expected tool version"))?
         .value()
         .as_string()
         .expect("Expected tool version to be a string");
@@ -251,21 +256,6 @@ mod tests {
     test_parse_fail!(
         fail_misquote,
         r#""open quote only"#,
-        expect![[r#"
-            Failed to parse KDL file .tool-tool.v2.kdl:
-              [31m×[0m Expected quoted string
-               ╭────
-             [2m1[0m │ "open quote only
-               · [35;1m────────┬───────[0m
-               ·         [35;1m╰── [35;1mnot quoted string[0m[0m
-               ╰────
-              [31m×[0m Found invalid node name
-               ╭────
-             [2m1[0m │ "open quote only
-               · [35;1m────────┬───────[0m
-               ·         [35;1m╰── [35;1mnot node name[0m[0m
-               ╰────
-            [36m  help: [0mThis can be any string type, including a quoted, raw, or multiline string, as well as a plain identifier string.
-        "#]]
+        expect!["Failed to parse KDL file '.tool-tool.v2.kdl'"]
     );
 }

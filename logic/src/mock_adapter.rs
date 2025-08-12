@@ -67,6 +67,10 @@ impl MockAdapter {
         self.write().args = all_args;
     }
 
+    pub fn set_configuration(&self, configuration: impl Into<String>) {
+        self.write().configuration_string = configuration.into();
+    }
+
     pub fn verify_effects(&self, expected: Expect) {
         expected.assert_eq(&self.read().effects_string);
     }

@@ -4,6 +4,7 @@ use crate::configuration::expand_config::expand_configuration_template_expressio
 use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::types::FilePath;
 use crate::version::get_version;
+use miette::{Context, GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
 use tool_tool_base::result::ToolToolResult;
 
@@ -17,8 +18,20 @@ impl ToolToolRunner {
             adapter: Box::new(adapter),
         }
     }
-
-    pub fn run(&mut self) -> ToolToolResult<()> {
+    pub fn run(&mut self) {
+        match self.run_inner() {
+            Ok(()) => {}
+            Err(err) => {
+                let mut message = format!("ERROR running tool-tool ({}):\n", get_version());
+                //                let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode());
+                let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode_nocolor());
+                let _ignored = handler.render_report(&mut message, err.as_ref());
+                self.adapter.print(&message);
+                self.adapter.exit(1);
+            }
+        }
+    }
+    pub fn run_inner(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.args();
         parse_configuration_from_kdl(".tool-tool.v2.kdl", "")?;
         for arg in args.iter().skip(1) {
@@ -49,7 +62,9 @@ impl ToolToolRunner {
     }
 
     fn validate_config(&mut self) -> ToolToolResult<()> {
-        let _ = self.load_config()?;
+        let _ = self
+            .load_config()
+            .context("Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'")?;
         Ok(())
     }
 
@@ -124,7 +139,7 @@ mod tests {
     fn print_help() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
         adapter.set_args(&["--help"]);
-        runner.run()?;
+        runner.run();
 
         adapter.verify_effects(expect![[r#"
             PRINT:
@@ -137,7 +152,7 @@ mod tests {
     fn print_version() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
         adapter.set_args(&["--version"]);
-        runner.run()?;
+        runner.run();
 
         assert_eq!(
             adapter.get_effects(),
@@ -150,7 +165,7 @@ mod tests {
     fn handle_unknown_argument() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
         adapter.set_args(&["--missing"]);
-        runner.run()?;
+        runner.run();
         adapter.verify_effects(expect![[r#"
             PRINT:
             	ERROR: Unknown argument: '--missing'
@@ -165,7 +180,7 @@ mod tests {
     fn validate_config_success() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
         adapter.set_args(&["--validate"]);
-        runner.run()?;
+        runner.run();
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
         "#]]);
@@ -176,7 +191,7 @@ mod tests {
     fn expand_config() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
         adapter.set_args(&["--expand-config"]);
-        runner.run()?;
+        runner.run();
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             PRINT:
@@ -192,6 +207,59 @@ mod tests {
             				FIZZ:     buzz
             				FROBNIZZ: nizzle
 
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn expand_config_with_syntax_error() -> ToolToolResult<()> {
+        let (mut runner, adapter) = setup();
+        adapter.set_configuration(r#"tools {"#);
+        adapter.set_args(&["--expand-config"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            PRINT:
+            	ERROR running tool-tool (0.2.0-dev):
+            	  × Failed to parse KDL file '.tool-tool.v2.kdl'
+            	  ╰─▶ Failed to parse KDL document
+
+            	Error: 
+            	  × No closing '}' for child block
+            	   ╭────
+            	 1 │ tools {
+            	   ·       ┬
+            	   ·       ╰── not closed
+            	   ╰────
+
+            EXIT: 1
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn validate_config_with_unexpected_toplevel_item() -> ToolToolResult<()> {
+        let (mut runner, adapter) = setup();
+        adapter.set_configuration(r#"foo"#);
+        adapter.set_args(&["--validate"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            PRINT:
+            	ERROR running tool-tool (0.2.0-dev):
+            	configuration::parse_config::parse_kdl
+
+            	  × Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
+            	  ├─▶ Failed to parse KDL file '.tool-tool.v2.kdl'
+            	  ╰─▶ Unexpected top-level item: 'foo'
+            	   ╭────
+            	 1 │ foo
+            	   · ─┬─
+            	   ·  ╰── unexpected
+            	   ╰────
+            	  help: Valid top level items are: 'tools'
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
