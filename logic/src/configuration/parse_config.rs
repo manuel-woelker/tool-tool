@@ -6,12 +6,14 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 use tool_tool_base::logging::info;
 use tool_tool_base::result::{Context, ToolToolResult, bail, err};
+use tracing::info_span;
 
 pub fn parse_configuration_from_kdl(
     filename: &str,
     kdl: &str,
 ) -> ToolToolResult<ToolToolConfiguration> {
     info!("Parsing KDL file '{filename}'");
+    let _span = info_span!("Parse configuration from KDL", filename).entered();
     (|| {
         let mut tools = vec![];
         let result = kdl.parse::<KdlDocument>()?;
@@ -112,7 +114,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
     Ok(tool)
 }
 
-fn children<'a>(node: &'a KdlNode) -> impl IntoIterator<Item = &'a KdlNode> + 'a {
+fn children(node: &KdlNode) -> impl IntoIterator<Item = &KdlNode> + '_ {
     node.children().map(|doc| doc.nodes()).into_iter().flatten()
 }
 

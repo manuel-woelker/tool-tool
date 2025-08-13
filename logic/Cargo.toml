@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 tool-tool-base = {path = "../base"}
+
+tracing = { workspace = true }
 relative-path = "2.0.1"
 kdl = "6.3.4"
 miette = { version = "7.6.0", features = ["fancy"] }
