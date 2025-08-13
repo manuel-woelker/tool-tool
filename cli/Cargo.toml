@@ -8,3 +8,6 @@ rust-version = "1.86.0"
 tool-tool-base = {path = "../base"}
 tool-tool-logic = {path = "../logic"}
 tool-tool-real_adapter = {path = "../real_adapter"}
+
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

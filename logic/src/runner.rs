@@ -6,6 +6,7 @@ use crate::types::FilePath;
 use crate::version::get_version;
 use miette::{Context, GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
+use tool_tool_base::logging::info;
 use tool_tool_base::result::ToolToolResult;
 
 pub struct ToolToolRunner {
@@ -19,6 +20,7 @@ impl ToolToolRunner {
         }
     }
     pub fn run(&mut self) {
+        info!("Running tool-tool ({}):", get_version());
         match self.run_inner() {
             Ok(()) => {}
             Err(err) => {

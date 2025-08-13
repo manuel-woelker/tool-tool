@@ -4,7 +4,10 @@ members = ["base", "logic", "real_adapter", "cli"]
 
 [workspace.dependencies]
 miette = { version = "7.6.0", features = ["fancy"] }
-
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+relative-path = "2.0.1"
+kdl = "6.3.4"
 
 [profile.dev.package."*"]
 # Set the default for dependencies in Development mode.

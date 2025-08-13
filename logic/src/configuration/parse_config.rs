@@ -4,12 +4,14 @@ use kdl::{KdlDocument, KdlNode};
 use miette::{LabeledSpan, Severity, miette};
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use tool_tool_base::logging::info;
 use tool_tool_base::result::{Context, ToolToolResult, bail, err};
 
 pub fn parse_configuration_from_kdl(
     filename: &str,
     kdl: &str,
 ) -> ToolToolResult<ToolToolConfiguration> {
+    info!("Parsing KDL file '{filename}'");
     (|| {
         let mut tools = vec![];
         let result = kdl.parse::<KdlDocument>()?;
