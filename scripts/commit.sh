@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+export RUSTFLAGS='-D warnings'
+
 cargo fmt
 cargo clippy -- -D warnings
 cargo test

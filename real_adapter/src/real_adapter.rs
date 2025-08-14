@@ -24,7 +24,7 @@ impl Adapter for RealAdapter {
     }
 
     fn env(&self) -> Vec<(String, String)> {
-        todo!()
+        env::vars().collect()
     }
 
     fn print(&self, message: &str) {

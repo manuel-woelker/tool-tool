@@ -2,6 +2,7 @@ use crate::adapter::Adapter;
 use crate::configuration::ToolToolConfiguration;
 use crate::configuration::expand_config::expand_configuration_template_expressions;
 use crate::configuration::parse_config::parse_configuration_from_kdl;
+use crate::help::print_help;
 use crate::types::FilePath;
 use crate::version::get_version;
 use miette::{Context, GraphicalReportHandler, GraphicalTheme};
@@ -45,31 +46,34 @@ impl ToolToolRunner {
     pub fn run_inner(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.args();
         parse_configuration_from_kdl(".tool-tool.v2.kdl", "")?;
-        for arg in args.iter().skip(1) {
-            match arg.as_str() {
-                "--help" => {
-                    self.print_help();
-                }
-                "--validate" => {
-                    self.validate_config()?;
-                }
-                "--expand-config" => {
-                    self.expand_config()?;
-                }
-                "--version" => {
-                    self.print_version();
-                }
-                other => {
-                    self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
-                    self.adapter.exit(1);
-                }
+        let first_arg = args.get(1);
+        let Some(first_arg) = first_arg else {
+            self.print_help();
+            return Ok(());
+        };
+        match first_arg.as_str() {
+            "--help" => {
+                self.print_help();
+            }
+            "--validate" => {
+                self.validate_config()?;
+            }
+            "--expand-config" => {
+                self.expand_config()?;
+            }
+            "--version" => {
+                self.print_version();
+            }
+            other => {
+                self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
+                self.adapter.exit(1);
             }
         }
         Ok(())
     }
 
     fn print_help(&mut self) {
-        self.adapter.print("help");
+        print_help(self.adapter.as_ref());
     }
 
     fn validate_config(&mut self) -> ToolToolResult<()> {
@@ -146,7 +150,6 @@ fn want_color(env: Vec<(String, String)>) -> bool {
 mod tests {
     use crate::mock_adapter::MockAdapter;
     use crate::runner::ToolToolRunner;
-    use crate::version::get_version;
     use expect_test::expect;
     use tool_tool_base::result::ToolToolResult;
 
@@ -164,7 +167,36 @@ mod tests {
 
         adapter.verify_effects(expect![[r#"
             PRINT:
-            	help
+            	🔧  tool-tool (vTEST) - A versatile tool management utility
+            PRINT:
+
+            	USAGE:
+            	    tool-tool [OPTIONS]
+
+            	OPTIONS:
+            	    --help              Show this help message and exit
+            	    --version           Display version information and exit
+            	    --validate          Validate the tool configuration file
+            	    --expand-config     Expand and display the configuration with all templates resolved
+
+            	EXAMPLES:
+            	    # Show help
+            	    tool-tool --help
+
+            	    # Print version
+            	    tool-tool --version
+
+            	    # Validate configuration
+            	    tool-tool --validate
+
+            	    # View expanded configuration
+            	    tool-tool --expand-config
+
+            	CONFIGURATION:
+            	    tool-tool looks for a configuration file named '.tool-tool.v2.kdl' in the current
+            	    directory. This file should contain the tool configuration in KDL format.
+
+            	For more information, please refer to the documentation.
         "#]]);
         Ok(())
     }
@@ -175,10 +207,11 @@ mod tests {
         adapter.set_args(&["--version"]);
         runner.run();
 
-        assert_eq!(
-            adapter.get_effects(),
-            format!("PRINT:\n\t{}\n\n", get_version())
-        );
+        adapter.verify_effects(expect![[r#"
+            PRINT:
+            	vTEST
+
+        "#]]);
         Ok(())
     }
 
@@ -241,7 +274,7 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             PRINT:
-            	ERROR running tool-tool (0.2.0-dev):
+            	ERROR running tool-tool (vTEST):
             	  × Failed to parse KDL file '.tool-tool.v2.kdl'
             	  ╰─▶ Failed to parse KDL document
 
@@ -267,7 +300,7 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             PRINT:
-            	ERROR running tool-tool (0.2.0-dev):
+            	ERROR running tool-tool (vTEST):
             	configuration::parse_config::parse_kdl
 
             	  × Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'

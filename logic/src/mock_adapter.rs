@@ -77,6 +77,7 @@ impl MockAdapter {
         expected.assert_eq(&self.read().effects_string);
     }
 
+    #[allow(dead_code)]
     pub fn get_effects(&self) -> String {
         self.read().effects_string.clone()
     }
