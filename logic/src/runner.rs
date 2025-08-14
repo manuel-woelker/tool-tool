@@ -11,12 +11,21 @@ use tool_tool_base::result::ToolToolResult;
 
 pub struct ToolToolRunner {
     adapter: Box<dyn Adapter>,
+    report_handler: GraphicalReportHandler,
 }
 
 impl ToolToolRunner {
     pub fn new(adapter: impl Adapter) -> Self {
+        let want_color = want_color(adapter.env());
+        let theme = if want_color {
+            GraphicalTheme::unicode()
+        } else {
+            GraphicalTheme::unicode_nocolor()
+        };
+        let report_handler = GraphicalReportHandler::new_themed(theme);
         Self {
             adapter: Box::new(adapter),
+            report_handler,
         }
     }
     pub fn run(&mut self) {
@@ -25,9 +34,9 @@ impl ToolToolRunner {
             Ok(()) => {}
             Err(err) => {
                 let mut message = format!("ERROR running tool-tool ({}):\n", get_version());
-                //                let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode());
-                let handler = GraphicalReportHandler::new_themed(GraphicalTheme::unicode_nocolor());
-                let _ignored = handler.render_report(&mut message, err.as_ref());
+                let _ignored = self
+                    .report_handler
+                    .render_report(&mut message, err.as_ref());
                 self.adapter.print(&message);
                 self.adapter.exit(1);
             }
@@ -121,6 +130,16 @@ impl ToolToolRunner {
         expand_configuration_template_expressions(&mut config)?;
         Ok(config)
     }
+}
+
+fn want_color(env: Vec<(String, String)>) -> bool {
+    let mut want_color = true;
+    for (key, value) in env {
+        if key == "NO_COLOR" && !value.is_empty() {
+            want_color = false;
+        }
+    }
+    want_color
 }
 
 #[cfg(test)]

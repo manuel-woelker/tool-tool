@@ -13,6 +13,7 @@ pub struct MockAdapter {
 struct MockAdapterInner {
     configuration_string: String,
     args: Vec<String>,
+    env: Vec<(String, String)>,
     effects_string: String,
 }
 
@@ -20,6 +21,7 @@ impl MockAdapter {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(RwLock::new(MockAdapterInner {
+                env: vec![("NO_COLOR".to_string(), "1".to_string())],
                 args: Vec::new(),
                 configuration_string: r#"
                     tools {
@@ -83,6 +85,10 @@ impl MockAdapter {
 impl Adapter for MockAdapter {
     fn args(&self) -> Vec<String> {
         self.read().args.clone()
+    }
+
+    fn env(&self) -> Vec<(String, String)> {
+        self.read().env.clone()
     }
 
     fn print(&self, message: &str) {

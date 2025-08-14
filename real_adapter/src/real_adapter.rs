@@ -23,6 +23,10 @@ impl Adapter for RealAdapter {
         env::args().collect()
     }
 
+    fn env(&self) -> Vec<(String, String)> {
+        todo!()
+    }
+
     fn print(&self, message: &str) {
         eprintln!("{message}");
     }

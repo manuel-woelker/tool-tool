@@ -9,6 +9,11 @@ pub trait Adapter: Debug + 'static {
     fn args(&self) -> Vec<String>;
 
     /**
+    Get the program environment
+    */
+    fn env(&self) -> Vec<(String, String)>;
+
+    /**
         Print a message to stderr
     */
     fn print(&self, message: &str);
