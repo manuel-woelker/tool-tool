@@ -20,9 +20,9 @@ You should never have to worry about:
 
 ## How it works:
 
-1. A configuration file (`.tool-tool.v1.yaml`) in the project repository root defines all the tool dependencies and where to download them.
+1. A configuration file (`.tool-tool.v2.kdl`) in the project repository root defines all the tool dependencies and where to download them.
 2. Small bootstrap binaries (`tt`, `tt.exe`) for all development platforms are also checked into your repository.
-3. All tool calls are then made through this bootstrap program. It parses the configuration file, downloads and caches the tools and executes the given command
+3. All tool calls are then made through this bootstrap program. It parses the configuration file, downloads and caches the tools and executes the given command.
 
 A sample yarn invocation:
 

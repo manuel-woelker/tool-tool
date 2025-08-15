@@ -5,13 +5,16 @@ use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::help::print_help;
 use crate::types::FilePath;
 use crate::version::get_version;
-use miette::{Context, GraphicalReportHandler, GraphicalTheme};
+use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use tool_tool_base::logging::info;
+use tool_tool_base::result::Context;
 use tool_tool_base::result::ToolToolResult;
 
 pub struct ToolToolRunner {
     adapter: Box<dyn Adapter>,
+    #[allow(dead_code)]
     report_handler: GraphicalReportHandler,
 }
 
@@ -35,9 +38,8 @@ impl ToolToolRunner {
             Ok(()) => {}
             Err(err) => {
                 let mut message = format!("ERROR running tool-tool ({}):\n", get_version());
-                let _ignored = self
-                    .report_handler
-                    .render_report(&mut message, err.as_ref());
+                writeln!(message, "{err:?}").unwrap();
+                // TODO Use graphical error reporter
                 self.adapter.print(&message);
                 self.adapter.exit(1);
             }
@@ -275,16 +277,14 @@ mod tests {
             READ FILE: .tool-tool.v2.kdl
             PRINT:
             	ERROR running tool-tool (vTEST):
-            	  × Failed to parse KDL file '.tool-tool.v2.kdl'
-            	  ╰─▶ Failed to parse KDL document
+            	Failed to parse KDL file '.tool-tool.v2.kdl'
 
-            	Error: 
-            	  × No closing '}' for child block
-            	   ╭────
-            	 1 │ tools {
-            	   ·       ┬
-            	   ·       ╰── not closed
-            	   ╰────
+            	Caused by:
+            	   0: Could not parse '.tool-tool.v2.kdl'
+            	   1: Failed to parse KDL document
+
+            	Location:
+            	    logic\src\configuration\parse_config.rs:23:14
 
             EXIT: 1
         "#]]);
@@ -301,17 +301,14 @@ mod tests {
             READ FILE: .tool-tool.v2.kdl
             PRINT:
             	ERROR running tool-tool (vTEST):
-            	configuration::parse_config::parse_kdl
+            	Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
 
-            	  × Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
-            	  ├─▶ Failed to parse KDL file '.tool-tool.v2.kdl'
-            	  ╰─▶ Unexpected top-level item: 'foo'
-            	   ╭────
-            	 1 │ foo
-            	   · ─┬─
-            	   ·  ╰── unexpected
-            	   ╰────
-            	  help: Valid top level items are: 'tools'
+            	Caused by:
+            	   0: Failed to parse KDL file '.tool-tool.v2.kdl'
+            	   1: Unexpected top-level item: 'foo'
+
+            	Location:
+            	    logic\src\configuration\parse_config.rs:50:32
 
             EXIT: 1
         "#]]);

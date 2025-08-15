@@ -1,4 +1,6 @@
+use std::path::PathBuf;
 use tool_tool_base::result::ToolToolResult;
+use tool_tool_real_adapter::download::Downloader;
 use tracing_subscriber::Layer;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
@@ -17,5 +19,6 @@ pub fn run_cli() -> ToolToolResult<()> {
     let adapter = tool_tool_real_adapter::RealAdapter::new();
     let mut runner = tool_tool_logic::runner::ToolToolRunner::new(adapter);
     runner.run();
+    Downloader::new().download("foo", &PathBuf::from("foo"))?;
     Ok(())
 }

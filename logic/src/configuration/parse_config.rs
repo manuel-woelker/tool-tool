@@ -5,7 +5,9 @@ use miette::{LabeledSpan, Severity, miette};
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use tool_tool_base::logging::info;
-use tool_tool_base::result::{Context, ToolToolResult, bail, err};
+use tool_tool_base::result::{
+    Context, MietteReportError, ToolToolError, ToolToolResult, bail, err,
+};
 use tracing::info_span;
 
 pub fn parse_configuration_from_kdl(
@@ -14,15 +16,17 @@ pub fn parse_configuration_from_kdl(
 ) -> ToolToolResult<ToolToolConfiguration> {
     info!("Parsing KDL file '{filename}'");
     let _span = info_span!("Parse configuration from KDL", filename).entered();
-    (|| {
+    (|| -> ToolToolResult<ToolToolConfiguration> {
         let mut tools = vec![];
-        let result = kdl.parse::<KdlDocument>()?;
+        let result = kdl
+            .parse::<KdlDocument>()
+            .wrap_err_with(|| format!("Could not parse '{filename}'"))?;
         let doc: KdlDocument = result;
         for document_node in doc.nodes() {
             match document_node.name().value() {
                 "tools" => {
                     for tool_node in children(document_node) {
-                        let tool = parse_tool(tool_node)?;
+                        let tool = parse_tool(tool_node).expect("TODO: Handle error");
                         tools.push(tool);
                     }
                 }
@@ -38,7 +42,13 @@ pub fn parse_configuration_from_kdl(
                         "Unexpected top-level item: '{other}'"
                     )
                     .with_source_code(kdl.to_string());
-                    return Err(report);
+                    // TODO: Report error
+                    //
+                    // return Err(report);
+                    //                    report.anyhow_kind()
+                    dbg!(std::any::type_name_of_val(&report));
+                    return Err(ToolToolError::new(MietteReportError::from(report)));
+                    //bail!(report);
                 }
             }
         }

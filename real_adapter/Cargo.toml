@@ -6,3 +6,9 @@ edition = "2024"
 [dependencies]
 tool-tool-base = {path = "../base"}
 tool-tool-logic = {path = "../logic"}
+
+ureq = { version = "3.0.12", features = ["platform-verifier"] }
+
+[dev-dependencies]
+httpmock = "0.7.0"
+test-temp-dir = "0.3.5"
