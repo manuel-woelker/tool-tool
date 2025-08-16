@@ -5,12 +5,12 @@ use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::help::print_help;
 use crate::types::FilePath;
 use crate::version::get_version;
+use kdl::KdlError;
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
-use std::fmt::Write;
 use tool_tool_base::logging::info;
-use tool_tool_base::result::Context;
 use tool_tool_base::result::ToolToolResult;
+use tool_tool_base::result::{Context, MietteReportError, ToolToolError};
 
 pub struct ToolToolRunner {
     adapter: Box<dyn Adapter>,
@@ -37,14 +37,38 @@ impl ToolToolRunner {
         match self.run_inner() {
             Ok(()) => {}
             Err(err) => {
-                let mut message = format!("ERROR running tool-tool ({}):\n", get_version());
-                writeln!(message, "{err:?}").unwrap();
-                // TODO Use graphical error reporter
-                self.adapter.print(&message);
+                if let Err(print_err) = self.print_error(err) {
+                    self.adapter
+                        .print(&format!("ERROR: Failed to print error: {print_err}\n"));
+                }
                 self.adapter.exit(1);
             }
         }
     }
+
+    fn print_error(&mut self, err: ToolToolError) -> ToolToolResult<()> {
+        let mut message = format!("ERROR running tool-tool ({}): {err}\n", get_version());
+
+        if err.source().is_some() {
+            message.push_str("  Chain of causes:\n");
+            err.chain().skip(1).enumerate().for_each(|(index, err)| {
+                message.push_str(&format!("   {index}: {err}\n"));
+            });
+            message.push('\n');
+            for err in err.chain() {
+                if let Some(err) = err.downcast_ref::<KdlError>() {
+                    self.report_handler.render_report(&mut message, err)?;
+                } else if let Some(err) = err.downcast_ref::<MietteReportError>() {
+                    self.report_handler
+                        .render_report(&mut message, err.report().as_ref())?;
+                }
+            }
+        }
+
+        self.adapter.print(&message);
+        Ok(())
+    }
+
     pub fn run_inner(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.args();
         parse_configuration_from_kdl(".tool-tool.v2.kdl", "")?;
@@ -276,15 +300,20 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             PRINT:
-            	ERROR running tool-tool (vTEST):
-            	Failed to parse KDL file '.tool-tool.v2.kdl'
-
-            	Caused by:
+            	ERROR running tool-tool (vTEST): Failed to parse KDL file '.tool-tool.v2.kdl'
+            	  Chain of causes:
             	   0: Could not parse '.tool-tool.v2.kdl'
             	   1: Failed to parse KDL document
 
-            	Location:
-            	    logic\src\configuration\parse_config.rs:23:14
+            	  × Failed to parse KDL document
+
+            	Error: 
+            	  × No closing '}' for child block
+            	   ╭────
+            	 1 │ tools {
+            	   ·       ┬
+            	   ·       ╰── not closed
+            	   ╰────
 
             EXIT: 1
         "#]]);
@@ -300,15 +329,20 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             PRINT:
-            	ERROR running tool-tool (vTEST):
-            	Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
-
-            	Caused by:
+            	ERROR running tool-tool (vTEST): Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
+            	  Chain of causes:
             	   0: Failed to parse KDL file '.tool-tool.v2.kdl'
             	   1: Unexpected top-level item: 'foo'
 
-            	Location:
-            	    logic\src\configuration\parse_config.rs:50:32
+            	configuration::parse_config::parse_kdl
+
+            	  × Unexpected top-level item: 'foo'
+            	   ╭────
+            	 1 │ foo
+            	   · ─┬─
+            	   ·  ╰── unexpected
+            	   ╰────
+            	  help: Valid top level items are: 'tools'
 
             EXIT: 1
         "#]]);

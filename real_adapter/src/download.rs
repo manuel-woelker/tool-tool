@@ -57,7 +57,6 @@ mod tests {
         });
         let downloader = Downloader::new();
         let local_path = temp_dir.used_by(|path| path.join("file_download"));
-        dbg!(&local_path);
         downloader
             .download(&server.url("/download_url"), &local_path.as_path())
             .unwrap();

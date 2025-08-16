@@ -10,6 +10,12 @@ pub struct MietteReportError {
     report: miette::Report,
 }
 
+impl MietteReportError {
+    pub fn report(&self) -> &miette::Report {
+        &self.report
+    }
+}
+
 impl From<miette::Report> for MietteReportError {
     fn from(report: miette::Report) -> Self {
         Self { report }

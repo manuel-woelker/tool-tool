@@ -46,7 +46,6 @@ pub fn parse_configuration_from_kdl(
                     //
                     // return Err(report);
                     //                    report.anyhow_kind()
-                    dbg!(std::any::type_name_of_val(&report));
                     return Err(ToolToolError::new(MietteReportError::from(report)));
                     //bail!(report);
                 }
