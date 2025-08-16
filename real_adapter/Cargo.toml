@@ -12,3 +12,4 @@ ureq = { version = "3.0.12", features = ["platform-verifier"] }
 [dev-dependencies]
 httpmock = "0.7.0"
 test-temp-dir = "0.3.5"
+assertables =  {workspace = true}
