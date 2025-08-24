@@ -1,5 +1,6 @@
 pub mod adapter;
 pub mod configuration;
+mod download_task;
 pub mod help;
 #[cfg(test)]
 mod mock_adapter;

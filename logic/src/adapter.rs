@@ -24,7 +24,15 @@ pub trait Adapter: Debug + 'static {
     fn read_file(&self, path: &FilePath) -> ToolToolResult<String>;
 
     /**
+        Create a directory (including parent directories if they don't exist)
+        the path is relative to parent directory of the tool-tool binary
+    */
+    fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()>;
+
+    /**
         Exit the process with the given exit code
     */
     fn exit(&self, exit_code: i32);
 }
+
+pub type AdapterBox = Box<dyn Adapter>;

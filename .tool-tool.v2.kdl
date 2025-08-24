@@ -1,0 +1,13 @@
+tools {
+	lsd "0.17.0" {
+		download {
+			linux "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-unknown-linux-gnu.tar.gz"
+			windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
+		}
+		commands {
+			lsd "bin/lsd"
+		}
+		env {
+		}
+	}
+}

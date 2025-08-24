@@ -1,7 +1,8 @@
-use crate::adapter::Adapter;
+use crate::adapter::{Adapter, AdapterBox};
 use crate::configuration::ToolToolConfiguration;
 use crate::configuration::expand_config::expand_configuration_template_expressions;
 use crate::configuration::parse_config::parse_configuration_from_kdl;
+use crate::download_task::run_download_task;
 use crate::help::print_help;
 use crate::types::FilePath;
 use crate::version::get_version;
@@ -13,10 +14,12 @@ use tool_tool_base::result::ToolToolResult;
 use tool_tool_base::result::{Context, MietteReportError, ToolToolError};
 
 pub struct ToolToolRunner {
-    adapter: Box<dyn Adapter>,
+    adapter: AdapterBox,
     #[allow(dead_code)]
     report_handler: GraphicalReportHandler,
 }
+
+pub const CONFIG_FILENAME: &str = ".tool-tool.v2.kdl";
 
 impl ToolToolRunner {
     pub fn new(adapter: impl Adapter) -> Self {
@@ -71,7 +74,7 @@ impl ToolToolRunner {
 
     pub fn run_inner(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.args();
-        parse_configuration_from_kdl(".tool-tool.v2.kdl", "")?;
+        parse_configuration_from_kdl(CONFIG_FILENAME, "")?;
         let first_arg = args.get(1);
         let Some(first_arg) = first_arg else {
             self.print_help();
@@ -86,6 +89,9 @@ impl ToolToolRunner {
             }
             "--expand-config" => {
                 self.expand_config()?;
+            }
+            "--download" => {
+                self.download()?;
             }
             "--version" => {
                 self.print_version();
@@ -159,6 +165,11 @@ impl ToolToolRunner {
         let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
         expand_configuration_template_expressions(&mut config)?;
         Ok(config)
+    }
+
+    fn download(&self) -> ToolToolResult<()> {
+        let config = self.load_config()?;
+        run_download_task(self.adapter.as_ref(), config)
     }
 }
 

@@ -101,6 +101,11 @@ impl Adapter for MockAdapter {
         Ok(self.read().configuration_string.clone())
     }
 
+    fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.log_effect(format!("CREATE DIR: {path}"));
+        Ok(())
+    }
+
     fn exit(&self, exit_code: i32) {
         self.log_effect(format!("EXIT: {}", exit_code));
     }

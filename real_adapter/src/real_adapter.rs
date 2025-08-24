@@ -1,20 +1,21 @@
 use std::env;
 use std::fmt::Debug;
-use tool_tool_base::result::ToolToolResult;
+use std::path::PathBuf;
+use tool_tool_base::result::{Context, ToolToolResult};
 use tool_tool_logic::adapter::Adapter;
 use tool_tool_logic::types::FilePath;
 
-pub struct RealAdapter {}
-
-impl RealAdapter {
-    pub fn new() -> Self {
-        Self {}
-    }
+pub struct RealAdapter {
+    base_path: PathBuf,
 }
 
-impl Default for RealAdapter {
-    fn default() -> Self {
-        Self::new()
+impl RealAdapter {
+    pub fn new(base_path: PathBuf) -> Self {
+        Self { base_path }
+    }
+
+    fn resolve_path(&self, path: &FilePath) -> ToolToolResult<PathBuf> {
+        Ok(path.to_path(&self.base_path))
     }
 }
 
@@ -31,8 +32,15 @@ impl Adapter for RealAdapter {
         eprintln!("{message}");
     }
 
-    fn read_file(&self, _path: &FilePath) -> ToolToolResult<String> {
-        todo!()
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<String> {
+        let physical_path = self.resolve_path(path)?;
+        std::fs::read_to_string(&physical_path)
+            .with_context(|| format!("Failed to read file {physical_path:?}"))
+    }
+
+    fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        std::fs::create_dir_all(self.resolve_path(path)?)?;
+        Ok(())
     }
 
     fn exit(&self, exit_code: i32) {
