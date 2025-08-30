@@ -4,6 +4,7 @@ use crate::configuration::expand_config::expand_configuration_template_expressio
 use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::download_task::run_download_task;
 use crate::help::print_help;
+use crate::store::Store;
 use crate::types::FilePath;
 use crate::version::get_version;
 use kdl::KdlError;
@@ -15,6 +16,7 @@ use tool_tool_base::result::{Context, MietteReportError, ToolToolError};
 
 pub struct ToolToolRunner {
     adapter: AdapterBox,
+    config: ToolToolConfiguration,
     #[allow(dead_code)]
     report_handler: GraphicalReportHandler,
 }
@@ -32,6 +34,7 @@ impl ToolToolRunner {
         let report_handler = GraphicalReportHandler::new_themed(theme);
         Self {
             adapter: Box::new(adapter),
+            config: ToolToolConfiguration::initial(),
             report_handler,
         }
     }
@@ -109,18 +112,18 @@ impl ToolToolRunner {
     }
 
     fn validate_config(&mut self) -> ToolToolResult<()> {
-        let _ = self
-            .load_config()
+        self.load_config()
             .context("Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'")?;
         Ok(())
     }
 
     fn expand_config(&mut self) -> ToolToolResult<()> {
-        let config = self.load_config()?;
+        self.load_config()?;
+        let config = &self.config;
         let mut output = String::new();
         output.push_str("Expanded tool-tool configuration:\n");
 
-        for tool in config.tools {
+        for tool in &config.tools {
             output.push_str(&format!("\t{} {}:\n", tool.name, tool.version));
             output_map(&mut output, "download urls", &tool.download_urls);
             output_map(&mut output, "commands", &tool.commands);
@@ -159,17 +162,23 @@ impl ToolToolRunner {
         self.adapter.print(&format!("{}\n", get_version()))
     }
 
-    fn load_config(&self) -> ToolToolResult<ToolToolConfiguration> {
-        let config_path = FilePath::from(".tool-tool.v2.kdl");
-        let config_string = self.adapter.read_file(&config_path)?;
-        let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
-        expand_configuration_template_expressions(&mut config)?;
-        Ok(config)
+    fn download(&mut self) -> ToolToolResult<()> {
+        self.load_config()?;
+        run_download_task(&self.create_store()?)
     }
 
-    fn download(&self) -> ToolToolResult<()> {
-        let config = self.load_config()?;
-        run_download_task(self.adapter.as_ref(), config)
+    fn create_store(&self) -> ToolToolResult<Store> {
+        // TODO: make inner runner with store?
+        Ok(Store::new(&self.config, self.adapter.as_ref()))
+    }
+
+    fn load_config(&mut self) -> ToolToolResult<()> {
+        let config_path = FilePath::from(".tool-tool.v2.kdl");
+        let config_string = std::io::read_to_string(self.adapter.read_file(&config_path)?)?;
+        let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
+        expand_configuration_template_expressions(&mut config)?;
+        self.config = config;
+        Ok(())
     }
 }
 

@@ -10,6 +10,7 @@ tracing = { workspace = true }
 relative-path = "2.0.1"
 kdl = "6.3.4"
 miette = { version = "7.6.0", features = ["fancy"] }
+sha2 = "0.10.9"
 
 [dev-dependencies]
 expect-test = "1.5.1"

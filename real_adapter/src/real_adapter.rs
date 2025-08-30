@@ -1,17 +1,25 @@
+use crate::download;
 use std::env;
 use std::fmt::Debug;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use tool_tool_base::result::{Context, ToolToolResult};
 use tool_tool_logic::adapter::Adapter;
+use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::FilePath;
 
 pub struct RealAdapter {
     base_path: PathBuf,
+    downloader: download::Downloader,
 }
 
 impl RealAdapter {
     pub fn new(base_path: PathBuf) -> Self {
-        Self { base_path }
+        Self {
+            base_path,
+            downloader: download::Downloader::new(),
+        }
     }
 
     fn resolve_path(&self, path: &FilePath) -> ToolToolResult<PathBuf> {
@@ -32,10 +40,11 @@ impl Adapter for RealAdapter {
         eprintln!("{message}");
     }
 
-    fn read_file(&self, path: &FilePath) -> ToolToolResult<String> {
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Read>> {
         let physical_path = self.resolve_path(path)?;
-        std::fs::read_to_string(&physical_path)
-            .with_context(|| format!("Failed to read file {physical_path:?}"))
+        Ok(Box::new(File::open(&physical_path).with_context(|| {
+            format!("Failed to read file {physical_path:?}")
+        })?))
     }
 
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
@@ -45,6 +54,21 @@ impl Adapter for RealAdapter {
 
     fn exit(&self, exit_code: i32) {
         std::process::exit(exit_code);
+    }
+
+    fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()> {
+        self.downloader
+            .download(url, &self.resolve_path(destination_path)?)?;
+        Ok(())
+    }
+
+    fn get_platform(&self) -> DownloadPlatform {
+        #[cfg(target_os = "macos")]
+        return DownloadPlatform::Darwin;
+        #[cfg(target_os = "linux")]
+        return DownloadPlatform::Linux;
+        #[cfg(target_os = "windows")]
+        return DownloadPlatform::Windows;
     }
 }
 

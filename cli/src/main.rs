@@ -7,7 +7,11 @@ fn main() {
     match run_cli() {
         Ok(()) => {}
         Err(e) => {
-            eprintln!("ERROR running tool-tool ({}):\n{}\n", get_version(), e);
+            eprintln!(
+                "FATAL ERROR running tool-tool ({}):\n{}\n",
+                get_version(),
+                e
+            );
             std::process::exit(1);
         }
     }

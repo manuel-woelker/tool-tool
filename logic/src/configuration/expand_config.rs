@@ -5,9 +5,9 @@ pub fn expand_configuration_template_expressions(
     configuration: &mut ToolToolConfiguration,
 ) -> ToolToolResult<()> {
     for tool in &mut configuration.tools {
-        for url in tool.download_urls.values_mut() {
-            let new_url = url.replace("${version}", &tool.version);
-            *url = new_url;
+        for download_artifact in tool.download_urls.values_mut() {
+            let new_url = download_artifact.url.replace("${version}", &tool.version);
+            download_artifact.url = new_url;
         }
     }
     Ok(())
@@ -52,8 +52,12 @@ mod tests {
                         name: "lsd",
                         version: "0.17.0",
                         download_urls: {
-                            Linux: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
-                            Windows: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
+                            Linux: DownloadArtifact {
+                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
+                            },
+                            Windows: DownloadArtifact {
+                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
+                            },
                         },
                         commands: {},
                         env: {},

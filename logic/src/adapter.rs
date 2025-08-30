@@ -1,5 +1,7 @@
+use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
 use std::fmt::Debug;
+use std::io::Read;
 use tool_tool_base::result::ToolToolResult;
 
 pub trait Adapter: Debug + 'static {
@@ -21,7 +23,7 @@ pub trait Adapter: Debug + 'static {
     /*
        Read a file to a string, the path is relative to parent directory of the tool-tool binary
     */
-    fn read_file(&self, path: &FilePath) -> ToolToolResult<String>;
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Read>>;
 
     /**
         Create a directory (including parent directories if they don't exist)
@@ -33,6 +35,16 @@ pub trait Adapter: Debug + 'static {
         Exit the process with the given exit code
     */
     fn exit(&self, exit_code: i32);
+
+    /**
+        Download a file from a url
+    */
+    fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()>;
+
+    /**
+        Get the currently runningplatform
+    */
+    fn get_platform(&self) -> DownloadPlatform;
 }
 
 pub type AdapterBox = Box<dyn Adapter>;

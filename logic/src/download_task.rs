@@ -1,14 +1,42 @@
-use crate::adapter::Adapter;
-use crate::configuration::ToolToolConfiguration;
-use crate::types::FilePath;
-use tool_tool_base::result::ToolToolResult;
+use crate::configuration::platform::DownloadPlatform;
+use crate::hash::compute_sha512;
+use crate::store::Store;
+use tool_tool_base::result::{ToolToolResult, err};
 
-pub fn run_download_task(
-    adapter: &dyn Adapter,
-    _config: ToolToolConfiguration,
-) -> ToolToolResult<()> {
+pub fn run_download_task(context: &Store) -> ToolToolResult<()> {
+    let adapter = context.adapter();
     // create .tool-tool directory if it doesn't exist
-    let tool_tool_dir = FilePath::from(".tool-tool/v2/tools");
+    let tool_tool_dir = context.tool_tool_dir();
+    // TODO: make random temp dir
+    let temp_dir = tool_tool_dir.join("tmp");
+    adapter.create_directory_all(&temp_dir)?;
     adapter.create_directory_all(&tool_tool_dir)?;
+    let host_platform = adapter.get_platform();
+    let config = context.config();
+    for tool in config.tools.iter() {
+        let tool_path = tool_tool_dir.join(format!("{}-{}", tool.name, tool.version));
+        adapter.create_directory_all(&tool_path)?;
+        let mut tool_platform = host_platform;
+        let download_artifact = tool
+            .download_urls
+            .get(&tool_platform)
+            .or_else(|| {
+                tool_platform = DownloadPlatform::Default;
+                tool.download_urls.get(&tool_platform)
+            })
+            .ok_or_else(|| {
+                err!(
+                    "No download url found for tool '{}' on platform '{host_platform}'",
+                    tool.name
+                )
+            })?;
+        dbg!(download_artifact);
+        let download_path = temp_dir.join(format!("download-{}-{}", tool.name, tool.version));
+        adapter.download_file(&download_artifact.url, &download_path)?;
+        let mut download_file = adapter.read_file(&download_path)?;
+
+        let sha512 = compute_sha512(download_file.as_mut())?;
+        dbg!(&sha512);
+    }
     Ok(())
 }

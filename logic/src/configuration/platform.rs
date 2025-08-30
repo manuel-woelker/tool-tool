@@ -9,6 +9,17 @@ pub enum DownloadPlatform {
     MacOS,
     Windows,
 }
+
+impl DownloadPlatform {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DownloadPlatform::Default => "default",
+            DownloadPlatform::Windows => "windows",
+            DownloadPlatform::Linux => "linux",
+            DownloadPlatform::MacOS => "macos",
+        }
+    }
+}
 impl FromStr for DownloadPlatform {
     type Err = ToolToolError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -24,11 +35,6 @@ impl FromStr for DownloadPlatform {
 
 impl Display for DownloadPlatform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DownloadPlatform::Default => write!(f, "default"),
-            DownloadPlatform::Windows => write!(f, "windows"),
-            DownloadPlatform::Linux => write!(f, "linux"),
-            DownloadPlatform::MacOS => write!(f, "macos"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }

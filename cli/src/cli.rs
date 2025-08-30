@@ -2,7 +2,6 @@ use std::env::current_exe;
 use std::path::PathBuf;
 use tool_tool_base::result::{ToolToolResult, bail, err};
 use tool_tool_logic::runner::CONFIG_FILENAME;
-use tool_tool_real_adapter::download::Downloader;
 use tracing::info;
 use tracing_subscriber::Layer;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -23,7 +22,6 @@ pub fn run_cli() -> ToolToolResult<()> {
     let adapter = tool_tool_real_adapter::RealAdapter::new(base_path.to_path_buf());
     let mut runner = tool_tool_logic::runner::ToolToolRunner::new(adapter);
     runner.run();
-    Downloader::new().download("foo", &PathBuf::from("foo"))?;
     Ok(())
 }
 

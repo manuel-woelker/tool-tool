@@ -1,7 +1,9 @@
 use crate::adapter::Adapter;
+use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
 use expect_test::Expect;
 use indent::indent_all_with;
+use std::io::{Cursor, Read};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tool_tool_base::result::ToolToolResult;
 
@@ -15,6 +17,7 @@ struct MockAdapterInner {
     args: Vec<String>,
     env: Vec<(String, String)>,
     effects_string: String,
+    platform: DownloadPlatform,
 }
 
 impl MockAdapter {
@@ -23,6 +26,7 @@ impl MockAdapter {
             inner: Arc::new(RwLock::new(MockAdapterInner {
                 env: vec![("NO_COLOR".to_string(), "1".to_string())],
                 args: Vec::new(),
+                platform: DownloadPlatform::Linux,
                 configuration_string: r#"
                     tools {
                         lsd "0.17.0" {
@@ -96,9 +100,11 @@ impl Adapter for MockAdapter {
         self.log_effect(format!("PRINT:\n{}", indent_all_with("\t", message)));
     }
 
-    fn read_file(&self, path: &FilePath) -> ToolToolResult<String> {
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Read>> {
         self.log_effect(format!("READ FILE: {path}"));
-        Ok(self.read().configuration_string.clone())
+        Ok(Box::new(Cursor::new(
+            self.read().configuration_string.clone(),
+        )))
     }
 
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
@@ -108,6 +114,14 @@ impl Adapter for MockAdapter {
 
     fn exit(&self, exit_code: i32) {
         self.log_effect(format!("EXIT: {}", exit_code));
+    }
+
+    fn download_file(&self, _url: &str, _destination_path: &FilePath) -> ToolToolResult<()> {
+        todo!()
+    }
+
+    fn get_platform(&self) -> DownloadPlatform {
+        self.read().platform
     }
 }
 

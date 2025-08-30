@@ -1,5 +1,5 @@
 use crate::configuration::platform::DownloadPlatform;
-use crate::configuration::{ToolConfiguration, ToolToolConfiguration};
+use crate::configuration::{DownloadArtifact, ToolConfiguration, ToolToolConfiguration};
 use kdl::{KdlDocument, KdlNode};
 use miette::{LabeledSpan, Severity, miette};
 use std::collections::BTreeMap;
@@ -78,8 +78,10 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
                         .expect("Expected download url")
                         .value()
                         .as_string()
-                        .expect("Expected download url to be a string");
-                    download_urls.insert(DownloadPlatform::from_str(&os)?, url.to_string());
+                        .expect("Expected download url to be a string")
+                        .to_string();
+                    download_urls
+                        .insert(DownloadPlatform::from_str(&os)?, DownloadArtifact { url });
                 }
             }
             "commands" => {
@@ -96,6 +98,20 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
                 }
             }
             "env" => {
+                for env_child in children(tool_child) {
+                    let env_name = env_child.name().value().to_string();
+                    // TODO: factor out getting parameters
+                    let env_value = env_child
+                        .entry(0)
+                        .expect("Expected command binary")
+                        .value()
+                        .as_string()
+                        .expect("Expected command to be a string")
+                        .to_string();
+                    env.insert(env_name, env_value);
+                }
+            }
+            "sha512" => {
                 for env_child in children(tool_child) {
                     let env_name = env_child.name().value().to_string();
                     // TODO: factor out getting parameters
@@ -204,8 +220,12 @@ mod tests {
                         name: "lsd",
                         version: "0.17.0",
                         download_urls: {
-                            Linux: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
-                            Windows: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
+                            Linux: DownloadArtifact {
+                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
+                            },
+                            Windows: DownloadArtifact {
+                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
+                            },
                         },
                         commands: {},
                         env: {},
@@ -237,7 +257,9 @@ mod tests {
                         name: "lsd",
                         version: "0.17.0",
                         download_urls: {
-                            Default: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
+                            Default: DownloadArtifact {
+                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
+                            },
                         },
                         commands: {
                             "foo": "echo foo",

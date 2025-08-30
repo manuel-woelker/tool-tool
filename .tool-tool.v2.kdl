@@ -1,4 +1,5 @@
 tools {
+	// cf. https://github.com/lsd-rs/lsd
 	lsd "0.17.0" {
 		download {
 			linux "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-unknown-linux-gnu.tar.gz"
