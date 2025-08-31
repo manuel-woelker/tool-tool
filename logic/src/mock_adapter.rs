@@ -116,8 +116,9 @@ impl Adapter for MockAdapter {
         self.log_effect(format!("EXIT: {}", exit_code));
     }
 
-    fn download_file(&self, _url: &str, _destination_path: &FilePath) -> ToolToolResult<()> {
-        todo!()
+    fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()> {
+        self.log_effect(format!("DOWNLOAD: {url} -> {destination_path}"));
+        Ok(())
     }
 
     fn get_platform(&self) -> DownloadPlatform {

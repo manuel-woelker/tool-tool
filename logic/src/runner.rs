@@ -288,6 +288,22 @@ mod tests {
     }
 
     #[test]
+    fn download() -> ToolToolResult<()> {
+        let (mut runner, adapter) = setup();
+        adapter.set_args(&["--download"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            CREATE DIR: .tool-tool/v2/tools/tmp
+            CREATE DIR: .tool-tool/v2/tools
+            CREATE DIR: .tool-tool/v2/tools/lsd-0.17.0
+            DOWNLOAD: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz -> .tool-tool/v2/tools/tmp/download-lsd-0.17.0
+            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-0.17.0
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
     fn expand_config() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
         adapter.set_args(&["--expand-config"]);

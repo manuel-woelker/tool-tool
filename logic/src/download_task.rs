@@ -30,13 +30,11 @@ pub fn run_download_task(context: &Workspace) -> ToolToolResult<()> {
                     tool.name
                 )
             })?;
-        dbg!(download_artifact);
         let download_path = temp_dir.join(format!("download-{}-{}", tool.name, tool.version));
         adapter.download_file(&download_artifact.url, &download_path)?;
         let mut download_file = adapter.read_file(&download_path)?;
 
-        let sha512 = compute_sha512(download_file.as_mut())?;
-        dbg!(&sha512);
+        let _sha512 = compute_sha512(download_file.as_mut())?;
     }
     Ok(())
 }
