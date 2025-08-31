@@ -1,6 +1,7 @@
 pub mod adapter;
 pub mod configuration;
 mod download_task;
+pub mod file_type;
 pub mod hash;
 pub mod help;
 #[cfg(test)]

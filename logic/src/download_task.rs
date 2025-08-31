@@ -1,4 +1,5 @@
 use crate::configuration::platform::DownloadPlatform;
+use crate::file_type::get_file_type_from_url;
 use crate::hash::compute_sha512;
 use crate::workspace::Workspace;
 use tool_tool_base::result::{ToolToolResult, err};
@@ -33,8 +34,12 @@ pub fn run_download_task(context: &Workspace) -> ToolToolResult<()> {
         let download_path = temp_dir.join(format!("download-{}-{}", tool.name, tool.version));
         adapter.download_file(&download_artifact.url, &download_path)?;
         let mut download_file = adapter.read_file(&download_path)?;
-
+        // TODO: compute and verify checksum
         let _sha512 = compute_sha512(download_file.as_mut())?;
+
+        // get file type
+        let _file_type = get_file_type_from_url(&download_artifact.url);
+        dbg!(_file_type);
     }
     Ok(())
 }
