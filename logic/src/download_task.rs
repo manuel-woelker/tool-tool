@@ -1,9 +1,9 @@
 use crate::configuration::platform::DownloadPlatform;
 use crate::hash::compute_sha512;
-use crate::store::Store;
+use crate::workspace::Workspace;
 use tool_tool_base::result::{ToolToolResult, err};
 
-pub fn run_download_task(context: &Store) -> ToolToolResult<()> {
+pub fn run_download_task(context: &Workspace) -> ToolToolResult<()> {
     let adapter = context.adapter();
     // create .tool-tool directory if it doesn't exist
     let tool_tool_dir = context.tool_tool_dir();

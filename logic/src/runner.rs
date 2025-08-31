@@ -4,9 +4,9 @@ use crate::configuration::expand_config::expand_configuration_template_expressio
 use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::download_task::run_download_task;
 use crate::help::print_help;
-use crate::store::Store;
 use crate::types::FilePath;
 use crate::version::get_version;
+use crate::workspace::Workspace;
 use kdl::KdlError;
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
@@ -164,12 +164,12 @@ impl ToolToolRunner {
 
     fn download(&mut self) -> ToolToolResult<()> {
         self.load_config()?;
-        run_download_task(&self.create_store()?)
+        run_download_task(&self.create_workspace()?)
     }
 
-    fn create_store(&self) -> ToolToolResult<Store> {
-        // TODO: make inner runner with store?
-        Ok(Store::new(&self.config, self.adapter.as_ref()))
+    fn create_workspace(&self) -> ToolToolResult<Workspace> {
+        // TODO: make inner runner with workspace?
+        Ok(Workspace::new(&self.config, self.adapter.as_ref()))
     }
 
     fn load_config(&mut self) -> ToolToolResult<()> {

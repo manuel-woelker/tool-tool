@@ -2,11 +2,11 @@ use crate::adapter::Adapter;
 use crate::configuration::ToolToolConfiguration;
 use crate::types::FilePath;
 
-pub struct Store<'a> {
+pub struct Workspace<'a> {
     config: &'a ToolToolConfiguration,
     adapter: &'a dyn Adapter,
 }
-impl<'a> Store<'a> {
+impl<'a> Workspace<'a> {
     pub fn new(config: &'a ToolToolConfiguration, adapter: &'a dyn Adapter) -> Self {
         Self { config, adapter }
     }

@@ -6,6 +6,6 @@ pub mod help;
 #[cfg(test)]
 mod mock_adapter;
 pub mod runner;
-pub mod store;
 pub mod types;
 pub mod version;
+pub mod workspace;
