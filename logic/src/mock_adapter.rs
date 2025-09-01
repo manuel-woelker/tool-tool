@@ -1,9 +1,9 @@
-use crate::adapter::Adapter;
+use crate::adapter::{Adapter, ReadSeek};
 use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
 use expect_test::Expect;
 use indent::indent_all_with;
-use std::io::{Cursor, Read};
+use std::io::{Cursor, Write};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tool_tool_base::result::ToolToolResult;
 
@@ -77,6 +77,10 @@ impl MockAdapter {
         self.write().configuration_string = configuration.into();
     }
 
+    pub fn set_platform(&self, platform: DownloadPlatform) {
+        self.write().platform = platform;
+    }
+
     pub fn verify_effects(&self, expected: Expect) {
         expected.assert_eq(&self.read().effects_string);
     }
@@ -100,15 +104,25 @@ impl Adapter for MockAdapter {
         self.log_effect(format!("PRINT:\n{}", indent_all_with("\t", message)));
     }
 
-    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Read>> {
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
         self.log_effect(format!("READ FILE: {path}"));
         Ok(Box::new(Cursor::new(
             self.read().configuration_string.clone(),
         )))
     }
 
+    fn create_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Write>> {
+        self.log_effect(format!("CREATE FILE: {path}"));
+        Ok(Box::new(Vec::new()))
+    }
+
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
         self.log_effect(format!("CREATE DIR: {path}"));
+        Ok(())
+    }
+
+    fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.log_effect(format!("DELETE DIR: {path}"));
         Ok(())
     }
 

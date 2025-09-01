@@ -194,6 +194,7 @@ fn want_color(env: Vec<(String, String)>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::configuration::platform::DownloadPlatform;
     use crate::mock_adapter::MockAdapter;
     use crate::runner::ToolToolRunner;
     use expect_test::expect;
@@ -288,8 +289,9 @@ mod tests {
     }
 
     #[test]
-    fn download() -> ToolToolResult<()> {
+    fn download_zip() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
+        adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
@@ -297,8 +299,14 @@ mod tests {
             CREATE DIR: .tool-tool/v2/tools/tmp
             CREATE DIR: .tool-tool/v2/tools
             CREATE DIR: .tool-tool/v2/tools/lsd-0.17.0
-            DOWNLOAD: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz -> .tool-tool/v2/tools/tmp/download-lsd-0.17.0
+            DOWNLOAD: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip -> .tool-tool/v2/tools/tmp/download-lsd-0.17.0
             READ FILE: .tool-tool/v2/tools/tmp/download-lsd-0.17.0
+            DELETE DIR: .tool-tool/v2/tools/lsd-0.17.0
+            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-0.17.0
+            PRINT:
+            	ERROR running tool-tool (vTEST): invalid Zip archive: Could not find EOCD
+
+            EXIT: 1
         "#]]);
         Ok(())
     }

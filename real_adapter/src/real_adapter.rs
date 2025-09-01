@@ -2,10 +2,10 @@ use crate::download;
 use std::env;
 use std::fmt::Debug;
 use std::fs::File;
-use std::io::Read;
+use std::io::Write;
 use std::path::PathBuf;
 use tool_tool_base::result::{Context, ToolToolResult};
-use tool_tool_logic::adapter::Adapter;
+use tool_tool_logic::adapter::{Adapter, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::FilePath;
 
@@ -40,15 +40,27 @@ impl Adapter for RealAdapter {
         eprintln!("{message}");
     }
 
-    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Read>> {
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
         let physical_path = self.resolve_path(path)?;
         Ok(Box::new(File::open(&physical_path).with_context(|| {
             format!("Failed to read file {physical_path:?}")
         })?))
     }
 
+    fn create_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Write>> {
+        let physical_path = self.resolve_path(path)?;
+        Ok(Box::new(File::create(&physical_path).with_context(
+            || format!("Failed to create file {physical_path:?}"),
+        )?))
+    }
+
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
         std::fs::create_dir_all(self.resolve_path(path)?)?;
+        Ok(())
+    }
+
+    fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        std::fs::remove_dir_all(self.resolve_path(path)?)?;
         Ok(())
     }
 

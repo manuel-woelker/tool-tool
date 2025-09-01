@@ -1,8 +1,12 @@
 use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
 use std::fmt::Debug;
-use std::io::Read;
+use std::io::{Read, Seek, Write};
 use tool_tool_base::result::ToolToolResult;
+
+pub trait ReadSeek: Read + Seek + 'static {}
+
+impl<T: Read + Seek + 'static> ReadSeek for T {}
 
 pub trait Adapter: Debug + 'static {
     /**
@@ -21,15 +25,26 @@ pub trait Adapter: Debug + 'static {
     fn print(&self, message: &str);
 
     /*
-       Read a file to a string, the path is relative to parent directory of the tool-tool binary
+       Read a file, the path is relative to parent directory of the tool-tool binary
     */
-    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Read>>;
+    fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>>;
+
+    /*
+       Create a file to a string, the path is relative to parent directory of the tool-tool binary
+    */
+    fn create_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Write>>;
 
     /**
         Create a directory (including parent directories if they don't exist)
         the path is relative to parent directory of the tool-tool binary
     */
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()>;
+
+    /**
+    Delete a directory (including all contained files and directories)
+    the path is relative to parent directory of the tool-tool binary
+    */
+    fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()>;
 
     /**
         Exit the process with the given exit code
