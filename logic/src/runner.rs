@@ -1,7 +1,7 @@
 use crate::adapter::{Adapter, AdapterBox};
-use crate::configuration::ToolToolConfiguration;
 use crate::configuration::expand_config::expand_configuration_template_expressions;
 use crate::configuration::parse_config::parse_configuration_from_kdl;
+use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::download_task::run_download_task;
 use crate::help::print_help;
 use crate::types::FilePath;
@@ -20,8 +20,6 @@ pub struct ToolToolRunner {
     #[allow(dead_code)]
     report_handler: GraphicalReportHandler,
 }
-
-pub const CONFIG_FILENAME: &str = ".tool-tool.v2.kdl";
 
 impl ToolToolRunner {
     pub fn new(adapter: impl Adapter) -> Self {
@@ -77,7 +75,7 @@ impl ToolToolRunner {
 
     pub fn run_inner(&mut self) -> ToolToolResult<()> {
         let args = self.adapter.args();
-        parse_configuration_from_kdl(CONFIG_FILENAME, "")?;
+        parse_configuration_from_kdl(CONFIGURATION_FILE_NAME, "")?;
         let first_arg = args.get(1);
         let Some(first_arg) = first_arg else {
             self.print_help();
@@ -173,7 +171,7 @@ impl ToolToolRunner {
     }
 
     fn load_config(&mut self) -> ToolToolResult<()> {
-        let config_path = FilePath::from(".tool-tool.v2.kdl");
+        let config_path = FilePath::from(CONFIGURATION_FILE_NAME);
         let config_string = std::io::read_to_string(self.adapter.read_file(&config_path)?)?;
         let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
         expand_configuration_template_expressions(&mut config)?;
@@ -197,6 +195,7 @@ mod tests {
     use crate::configuration::platform::DownloadPlatform;
     use crate::mock_adapter::MockAdapter;
     use crate::runner::ToolToolRunner;
+    use crate::test_util::zip_builder::ZipBuilder;
     use expect_test::expect;
     use tool_tool_base::result::ToolToolResult;
 
@@ -204,6 +203,13 @@ mod tests {
         let adapter = MockAdapter::new();
         let runner = ToolToolRunner::new(adapter.clone());
         (runner, adapter)
+    }
+
+    fn build_test_zip() -> ToolToolResult<Vec<u8>> {
+        let mut zip_builder = ZipBuilder::default();
+        zip_builder.add_file("upper/foo", b"bar")?;
+        zip_builder.add_file("upper/fizz/buzz", b"bizz")?;
+        Ok(zip_builder.build()?)
     }
 
     #[test]
@@ -291,6 +297,7 @@ mod tests {
     #[test]
     fn download_zip() -> ToolToolResult<()> {
         let (mut runner, adapter) = setup();
+        adapter.set_url("https://example.com/test-1.2.3.zip", build_test_zip()?);
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["--download"]);
         runner.run();
@@ -298,15 +305,15 @@ mod tests {
             READ FILE: .tool-tool.v2.kdl
             CREATE DIR: .tool-tool/v2/tools/tmp
             CREATE DIR: .tool-tool/v2/tools
-            CREATE DIR: .tool-tool/v2/tools/lsd-0.17.0
-            DOWNLOAD: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip -> .tool-tool/v2/tools/tmp/download-lsd-0.17.0
-            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-0.17.0
-            DELETE DIR: .tool-tool/v2/tools/lsd-0.17.0
-            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-0.17.0
-            PRINT:
-            	ERROR running tool-tool (vTEST): invalid Zip archive: Could not find EOCD
-
-            EXIT: 1
+            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tools/tmp/download-lsd-1.2.3
+            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/tools/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo
+            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz
         "#]]);
         Ok(())
     }
@@ -320,10 +327,10 @@ mod tests {
             READ FILE: .tool-tool.v2.kdl
             PRINT:
             	Expanded tool-tool configuration:
-            		lsd 0.17.0:
+            		lsd 1.2.3:
             			download urls:
-            				linux:   https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz
-            				windows: https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip
+            				linux:   https://example.com/test-1.2.3.tar.gz
+            				windows: https://example.com/test-1.2.3.zip
             			commands:
             				bar:    echo bar
             				foobar: echo foobar

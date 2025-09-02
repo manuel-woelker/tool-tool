@@ -6,6 +6,8 @@ pub mod expand_config;
 pub mod parse_config;
 pub mod platform;
 
+pub const CONFIGURATION_FILE_NAME: &str = ".tool-tool.v2.kdl";
+
 #[derive(Debug)]
 pub struct DownloadArtifact {
     pub url: String,

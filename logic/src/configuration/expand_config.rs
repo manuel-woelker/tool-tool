@@ -15,13 +15,14 @@ pub fn expand_configuration_template_expressions(
 
 #[cfg(test)]
 mod tests {
+    use crate::configuration::CONFIGURATION_FILE_NAME;
     use crate::configuration::expand_config::expand_configuration_template_expressions;
     use crate::configuration::parse_config::parse_configuration_from_kdl;
     use expect_test::{Expect, expect};
     use tool_tool_base::result::ToolToolResult;
 
     fn test_parse_and_expand(kdl: &str, expected: Expect) -> ToolToolResult<()> {
-        let mut config = parse_configuration_from_kdl(".tool-tool.v2.kdl", kdl)?;
+        let mut config = parse_configuration_from_kdl(CONFIGURATION_FILE_NAME, kdl)?;
         expand_configuration_template_expressions(&mut config)?;
         expected.assert_debug_eq(&config);
         Ok(())

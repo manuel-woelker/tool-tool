@@ -1,11 +1,13 @@
 use crate::adapter::{Adapter, ReadSeek};
+use crate::configuration::CONFIGURATION_FILE_NAME;
 use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
 use expect_test::Expect;
 use indent::indent_all_with;
+use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use tool_tool_base::result::ToolToolResult;
+use tool_tool_base::result::{ToolToolResult, err};
 
 #[derive(Clone)]
 pub struct MockAdapter {
@@ -13,26 +15,25 @@ pub struct MockAdapter {
 }
 
 struct MockAdapterInner {
-    configuration_string: String,
     args: Vec<String>,
     env: Vec<(String, String)>,
     effects_string: String,
     platform: DownloadPlatform,
+    url_map: HashMap<String, Vec<u8>>,
+    file_map: HashMap<FilePath, Vec<u8>>,
 }
 
 impl MockAdapter {
     pub fn new() -> Self {
-        Self {
-            inner: Arc::new(RwLock::new(MockAdapterInner {
-                env: vec![("NO_COLOR".to_string(), "1".to_string())],
-                args: Vec::new(),
-                platform: DownloadPlatform::Linux,
-                configuration_string: r#"
+        let mut file_map = HashMap::new();
+        file_map.insert(
+            FilePath::from(CONFIGURATION_FILE_NAME),
+            r#"
                     tools {
-                        lsd "0.17.0" {
+                        lsd "1.2.3" {
                             download {
-                                linux "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-unknown-linux-gnu.tar.gz"
-                                windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
+                                linux "https://example.com/test-1.2.3.tar.gz"
+                                windows "https://example.com/test-1.2.3.zip"
                             }
                             commands {
                                 foobar "echo foobar"
@@ -44,7 +45,17 @@ impl MockAdapter {
                             }
                        }
                     }
-                       "#.to_string(),
+                       "#
+            .as_bytes()
+            .to_vec(),
+        );
+        Self {
+            inner: Arc::new(RwLock::new(MockAdapterInner {
+                env: vec![("NO_COLOR".to_string(), "1".to_string())],
+                args: Vec::new(),
+                platform: DownloadPlatform::Linux,
+                url_map: HashMap::new(),
+                file_map,
                 effects_string: String::new(),
             })),
         }
@@ -74,11 +85,21 @@ impl MockAdapter {
     }
 
     pub fn set_configuration(&self, configuration: impl Into<String>) {
-        self.write().configuration_string = configuration.into();
+        self.set_file(CONFIGURATION_FILE_NAME, configuration.into().into_bytes());
     }
 
     pub fn set_platform(&self, platform: DownloadPlatform) {
         self.write().platform = platform;
+    }
+
+    pub fn set_url(&self, url: &str, content: Vec<u8>) {
+        self.write().url_map.insert(url.to_string(), content);
+    }
+
+    pub fn set_file(&self, file_path: &str, content: Vec<u8>) {
+        self.write()
+            .file_map
+            .insert(FilePath::from(file_path), content);
     }
 
     pub fn verify_effects(&self, expected: Expect) {
@@ -107,7 +128,11 @@ impl Adapter for MockAdapter {
     fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
         self.log_effect(format!("READ FILE: {path}"));
         Ok(Box::new(Cursor::new(
-            self.read().configuration_string.clone(),
+            self.read()
+                .file_map
+                .get(path)
+                .ok_or_else(|| err!("File '{path}' does not exist"))?
+                .clone(),
         )))
     }
 
@@ -132,6 +157,15 @@ impl Adapter for MockAdapter {
 
     fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()> {
         self.log_effect(format!("DOWNLOAD: {url} -> {destination_path}"));
+        let content = self
+            .read()
+            .url_map
+            .get(url)
+            .ok_or_else(|| err!("URL '{url}' does not exist"))?
+            .clone();
+        self.write()
+            .file_map
+            .insert(destination_path.clone(), content);
         Ok(())
     }
 

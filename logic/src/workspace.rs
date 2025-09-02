@@ -1,5 +1,5 @@
 use crate::adapter::Adapter;
-use crate::configuration::ToolToolConfiguration;
+use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::types::FilePath;
 
 pub struct Workspace<'a> {
@@ -20,7 +20,7 @@ impl<'a> Workspace<'a> {
     }
 
     pub fn config_path(&self) -> FilePath {
-        FilePath::from(".tool-tool.v2.kdl")
+        FilePath::from(CONFIGURATION_FILE_NAME)
     }
     pub fn tool_tool_dir(&self) -> FilePath {
         FilePath::from(".tool-tool/v2/tools")

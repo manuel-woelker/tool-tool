@@ -145,12 +145,13 @@ fn children(node: &KdlNode) -> impl IntoIterator<Item = &KdlNode> + '_ {
 
 #[cfg(test)]
 mod tests {
+    use crate::configuration::CONFIGURATION_FILE_NAME;
     use crate::configuration::parse_config::parse_configuration_from_kdl;
     use expect_test::{Expect, expect};
     use tool_tool_base::result::ToolToolResult;
 
     fn test_parse(kdl: &str, expected: Expect) -> ToolToolResult<()> {
-        let config = parse_configuration_from_kdl(".tool-tool.v2.kdl", kdl)?;
+        let config = parse_configuration_from_kdl(CONFIGURATION_FILE_NAME, kdl)?;
         expected.assert_debug_eq(&config);
         Ok(())
     }
@@ -275,7 +276,7 @@ mod tests {
 
     fn test_parse_fail(kdl: &str, expected: Expect) -> ToolToolResult<()> {
         let error =
-            parse_configuration_from_kdl(".tool-tool.v2.kdl", kdl).expect_err("Expected error");
+            parse_configuration_from_kdl(CONFIGURATION_FILE_NAME, kdl).expect_err("Expected error");
         expected.assert_eq(&error.to_string());
         Ok(())
     }

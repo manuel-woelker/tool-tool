@@ -1,7 +1,7 @@
 use std::env::current_exe;
 use std::path::PathBuf;
 use tool_tool_base::result::{ToolToolResult, bail, err};
-use tool_tool_logic::runner::CONFIG_FILENAME;
+use tool_tool_logic::configuration::CONFIGURATION_FILE_NAME;
 use tracing::info;
 use tracing_subscriber::Layer;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -41,14 +41,14 @@ fn find_base_path() -> ToolToolResult<PathBuf> {
         let Some(parent_path) = candidate_path.parent() else {
             break;
         };
-        let config_path = parent_path.join(CONFIG_FILENAME);
+        let config_path = parent_path.join(CONFIGURATION_FILE_NAME);
         if config_path.exists() && config_path.is_file() {
             return Ok(parent_path.to_path_buf());
         }
         candidate_path = parent_path.to_path_buf();
     }
     bail!(
-        "Could not find config file '{CONFIG_FILENAME}' base path from tool-tool executable '{:?}'",
+        "Could not find config file '{CONFIGURATION_FILE_NAME}' base path from tool-tool executable '{:?}'",
         exe_parent
     )
 }

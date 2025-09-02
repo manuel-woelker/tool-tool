@@ -5,8 +5,10 @@ pub mod file_type;
 pub mod hash;
 pub mod help;
 #[cfg(test)]
-mod mock_adapter;
+pub(crate) mod mock_adapter;
 pub mod runner;
+#[cfg(test)]
+pub(crate) mod test_util;
 pub mod types;
 pub mod version;
 pub mod workspace;
