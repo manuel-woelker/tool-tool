@@ -1,3 +1,4 @@
+use crate::test_util::archive_builder::ArchiveBuilder;
 use std::io::{Cursor, Write};
 use tool_tool_base::result::ToolToolResult;
 use zip::write::SimpleFileOptions;
@@ -14,25 +15,21 @@ impl Default for ZipBuilder {
     }
 }
 
-impl ZipBuilder {
-    pub fn add_file(
-        &mut self,
-        path: impl AsRef<str>,
-        content: impl AsRef<[u8]>,
-    ) -> ToolToolResult<()> {
+impl ArchiveBuilder for ZipBuilder {
+    fn add_file(&mut self, path: impl AsRef<str>, content: impl AsRef<[u8]>) -> ToolToolResult<()> {
         self.zip_writer
             .start_file(path.as_ref().to_string(), SimpleFileOptions::default())?;
         self.zip_writer.write_all(content.as_ref())?;
         Ok(())
     }
 
-    pub fn add_directory(&mut self, path: impl AsRef<str>) -> ToolToolResult<()> {
+    fn add_directory(&mut self, path: impl AsRef<str>) -> ToolToolResult<()> {
         self.zip_writer
             .add_directory(path.as_ref().to_string(), SimpleFileOptions::default())?;
         Ok(())
     }
 
-    pub fn build(self) -> ToolToolResult<Vec<u8>> {
+    fn build(self) -> ToolToolResult<Vec<u8>> {
         let cursor = self.zip_writer.finish()?;
         Ok(cursor.into_inner())
     }

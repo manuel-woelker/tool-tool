@@ -195,6 +195,7 @@ mod tests {
     use crate::configuration::platform::DownloadPlatform;
     use crate::mock_adapter::MockAdapter;
     use crate::runner::ToolToolRunner;
+    use crate::test_util::archive_builder::ArchiveBuilder;
     use crate::test_util::zip_builder::ZipBuilder;
     use expect_test::expect;
     use tool_tool_base::result::ToolToolResult;
@@ -206,10 +207,14 @@ mod tests {
     }
 
     fn build_test_zip() -> ToolToolResult<Vec<u8>> {
-        let mut zip_builder = ZipBuilder::default();
-        zip_builder.add_file("upper/foo", b"bar")?;
-        zip_builder.add_file("upper/fizz/buzz", b"bizz")?;
-        Ok(zip_builder.build()?)
+        build_archive::<ZipBuilder>()
+    }
+
+    fn build_archive<T: ArchiveBuilder>() -> ToolToolResult<Vec<u8>> {
+        let mut archive_builder = T::default();
+        archive_builder.add_file("upper/foo", b"bar")?;
+        archive_builder.add_file("upper/fizz/buzz", b"bizz")?;
+        Ok(archive_builder.build()?)
     }
 
     #[test]
