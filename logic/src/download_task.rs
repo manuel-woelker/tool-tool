@@ -2,7 +2,9 @@ use crate::configuration::platform::DownloadPlatform;
 use crate::file_type::{FileType, get_file_type_from_url};
 use crate::hash::compute_sha512;
 use crate::workspace::Workspace;
+use flate2::read::GzDecoder;
 use relative_path::RelativePathBuf;
+use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
 
 pub fn run_download_task(workspace: &Workspace) -> ToolToolResult<()> {
@@ -46,7 +48,7 @@ pub fn run_download_task(workspace: &Workspace) -> ToolToolResult<()> {
                 extract_zip(workspace, &download_path, &tool_path)?;
             }
             FileType::TarGz => {
-                todo!()
+                extract_targz(workspace, &download_path, &tool_path)?;
             }
             FileType::Other => {
                 todo!()
@@ -86,6 +88,41 @@ fn extract_zip(
             }
             let mut outfile = adapter.create_file(&joined_path)?;
             std::io::copy(&mut zip_entry, &mut outfile)?;
+        }
+    }
+    Ok(())
+}
+
+fn extract_targz(
+    workspace: &Workspace,
+    targz_path: &RelativePathBuf,
+    destination_path: &RelativePathBuf,
+) -> ToolToolResult<()> {
+    let adapter = workspace.adapter();
+    let mut archive = tar::Archive::new(GzDecoder::new(adapter.read_file(targz_path)?));
+    for archive_entry in archive.entries()? {
+        let mut archive_entry = archive_entry?;
+        let outpath = archive_entry.path()?;
+
+        // TODO: check file does not escape
+        let relative_path_buf = RelativePathBuf::from_path(outpath)?;
+        // TODO: make skip_components configurable
+        let mut components = relative_path_buf.components();
+        components.next();
+        let relative_path_buf = components.as_relative_path();
+        let joined_path = destination_path.join(relative_path_buf);
+        match archive_entry.header().entry_type() {
+            EntryType::Directory => {
+                adapter.create_directory_all(&joined_path)?;
+            }
+            EntryType::Regular => {
+                if let Some(parent_path) = joined_path.parent() {
+                    adapter.create_directory_all(&parent_path.to_relative_path_buf())?;
+                }
+                let mut outfile = adapter.create_file(&joined_path)?;
+                std::io::copy(&mut archive_entry, &mut outfile)?;
+            }
+            _ => {}
         }
     }
     Ok(())

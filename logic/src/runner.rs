@@ -196,6 +196,7 @@ mod tests {
     use crate::mock_adapter::MockAdapter;
     use crate::runner::ToolToolRunner;
     use crate::test_util::archive_builder::ArchiveBuilder;
+    use crate::test_util::targz_builder::TarGzBuilder;
     use crate::test_util::zip_builder::ZipBuilder;
     use expect_test::expect;
     use tool_tool_base::result::ToolToolResult;
@@ -208,6 +209,10 @@ mod tests {
 
     fn build_test_zip() -> ToolToolResult<Vec<u8>> {
         build_archive::<ZipBuilder>()
+    }
+
+    fn build_test_targz() -> ToolToolResult<Vec<u8>> {
+        build_archive::<TarGzBuilder>()
     }
 
     fn build_archive<T: ArchiveBuilder>() -> ToolToolResult<Vec<u8>> {
@@ -317,8 +322,36 @@ mod tests {
             READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
             CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
             CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo -> bar
             CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz -> bizz
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn download_targz() -> ToolToolResult<()> {
+        let (mut runner, adapter) = setup();
+        adapter.set_url("https://example.com/test-1.2.3.tar.gz", build_test_targz()?);
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            CREATE DIR: .tool-tool/v2/tools/tmp
+            CREATE DIR: .tool-tool/v2/tools
+            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tools/tmp/download-lsd-1.2.3
+            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/tools/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz -> bizz
         "#]]);
         Ok(())
     }

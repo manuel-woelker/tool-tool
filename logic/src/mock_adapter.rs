@@ -73,7 +73,7 @@ impl MockAdapter {
             .expect("Unable to acquire write lock for mock adapter")
     }
 
-    fn log_effect(&self, effect: impl AsRef<str>) {
+    pub(crate) fn log_effect(&self, effect: impl AsRef<str>) {
         self.write().effects_string.push_str(effect.as_ref());
         self.write().effects_string.push('\n');
     }
@@ -138,7 +138,7 @@ impl Adapter for MockAdapter {
 
     fn create_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Write>> {
         self.log_effect(format!("CREATE FILE: {path}"));
-        Ok(Box::new(Vec::new()))
+        Ok(Box::new(MockFile::new(path, self.clone())))
     }
 
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
@@ -177,5 +177,41 @@ impl Adapter for MockAdapter {
 impl std::fmt::Debug for MockAdapter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "MockAdapter")
+    }
+}
+
+struct MockFile {
+    path: String,
+    data: Vec<u8>,
+    mock_adapter: MockAdapter,
+}
+
+impl MockFile {
+    fn new(path: &FilePath, mock_adapter: MockAdapter) -> Self {
+        Self {
+            path: path.to_string(),
+            data: vec![],
+            mock_adapter,
+        }
+    }
+}
+
+impl Write for MockFile {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.data.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Drop for MockFile {
+    fn drop(&mut self) {
+        self.mock_adapter.log_effect(format!(
+            "WRITE FILE: {} -> {}",
+            self.path,
+            String::from_utf8_lossy(&self.data)
+        ));
     }
 }

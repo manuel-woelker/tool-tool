@@ -3,12 +3,12 @@ use std::io::Read;
 use tool_tool_base::result::ToolToolResult;
 
 /// Computes the SHA-512 digest of any type that implements `Read`.
-pub fn compute_sha512<R: Read>(mut reader: R) -> ToolToolResult<String> {
+pub fn compute_sha512<R: Read>(mut read: R) -> ToolToolResult<String> {
     let mut hasher = Sha512::new();
     let mut buffer = [0u8; 8192]; // 8 KiB buffer
 
     loop {
-        let n = reader.read(&mut buffer)?;
+        let n = read.read(&mut buffer)?;
         if n == 0 {
             break;
         }
