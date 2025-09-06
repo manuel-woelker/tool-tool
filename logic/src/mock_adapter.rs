@@ -96,10 +96,10 @@ impl MockAdapter {
         self.write().url_map.insert(url.to_string(), content);
     }
 
-    pub fn set_file(&self, file_path: &str, content: Vec<u8>) {
+    pub fn set_file(&self, file_path: &str, content: impl Into<Vec<u8>>) {
         self.write()
             .file_map
-            .insert(FilePath::from(file_path), content);
+            .insert(FilePath::from(file_path), content.into());
     }
 
     pub fn verify_effects(&self, expected: Expect) {

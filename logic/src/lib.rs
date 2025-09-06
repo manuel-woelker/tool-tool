@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod checksums;
 pub mod configuration;
 mod download_task;
 pub mod file_type;

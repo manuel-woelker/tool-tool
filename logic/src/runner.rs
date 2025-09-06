@@ -171,13 +171,17 @@ impl ToolToolRunner {
     }
 
     fn load_config(&mut self) -> ToolToolResult<()> {
-        let config_path = FilePath::from(CONFIGURATION_FILE_NAME);
-        let config_string = std::io::read_to_string(self.adapter.read_file(&config_path)?)?;
-        let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
-        expand_configuration_template_expressions(&mut config)?;
-        self.config = config;
+        self.config = load_config(self.adapter.as_ref())?;
         Ok(())
     }
+}
+
+pub fn load_config(adapter: &dyn Adapter) -> ToolToolResult<ToolToolConfiguration> {
+    let config_path = FilePath::from(CONFIGURATION_FILE_NAME);
+    let config_string = std::io::read_to_string(adapter.read_file(&config_path)?)?;
+    let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
+    expand_configuration_template_expressions(&mut config)?;
+    Ok(config)
 }
 
 fn want_color(env: Vec<(String, String)>) -> bool {
@@ -313,19 +317,19 @@ mod tests {
         runner.run();
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
-            CREATE DIR: .tool-tool/v2/tools/tmp
-            CREATE DIR: .tool-tool/v2/tools
-            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tools/tmp/download-lsd-1.2.3
-            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
-            DELETE DIR: .tool-tool/v2/tools/lsd-1.2.3
-            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
         "#]]);
         Ok(())
     }
@@ -339,19 +343,19 @@ mod tests {
         runner.run();
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
-            CREATE DIR: .tool-tool/v2/tools/tmp
-            CREATE DIR: .tool-tool/v2/tools
-            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tools/tmp/download-lsd-1.2.3
-            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
-            DELETE DIR: .tool-tool/v2/tools/lsd-1.2.3
-            READ FILE: .tool-tool/v2/tools/tmp/download-lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/tools/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/tools/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
         "#]]);
         Ok(())
     }

@@ -7,6 +7,8 @@ pub mod parse_config;
 pub mod platform;
 
 pub const CONFIGURATION_FILE_NAME: &str = ".tool-tool.v2.kdl";
+pub const TOOL_TOOL_DIRECTORY: &str = ".tool-tool/v2/";
+pub const CHECKSUM_FILE_NAME: &str = "checksums.kdl";
 
 #[derive(Debug)]
 pub struct DownloadArtifact {
