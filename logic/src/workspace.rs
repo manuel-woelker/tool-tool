@@ -1,22 +1,22 @@
-use crate::adapter::Adapter;
+use crate::adapter::{Adapter, AdapterBox};
 use crate::configuration::{CONFIGURATION_FILE_NAME, TOOL_TOOL_DIRECTORY, ToolToolConfiguration};
 use crate::types::FilePath;
 
-pub struct Workspace<'a> {
-    config: &'a ToolToolConfiguration,
-    adapter: &'a dyn Adapter,
+pub struct Workspace {
+    config: ToolToolConfiguration,
+    adapter: AdapterBox,
 }
-impl<'a> Workspace<'a> {
-    pub fn new(config: &'a ToolToolConfiguration, adapter: &'a dyn Adapter) -> Self {
+impl Workspace {
+    pub fn new(config: ToolToolConfiguration, adapter: AdapterBox) -> Self {
         Self { config, adapter }
     }
 
-    pub fn config(&self) -> &'a ToolToolConfiguration {
-        self.config
+    pub fn config(&self) -> &ToolToolConfiguration {
+        &self.config
     }
 
-    pub fn adapter(&self) -> &'a dyn Adapter {
-        self.adapter
+    pub fn adapter(&self) -> &dyn Adapter {
+        self.adapter.as_ref()
     }
 
     pub fn config_path(&self) -> FilePath {

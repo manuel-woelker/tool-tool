@@ -2,6 +2,7 @@ use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
 use std::fmt::Debug;
 use std::io::{Read, Seek, Write};
+use std::rc::Rc;
 use tool_tool_base::result::ToolToolResult;
 
 pub trait ReadSeek: Read + Seek + 'static {}
@@ -62,4 +63,4 @@ pub trait Adapter: Debug + 'static {
     fn get_platform(&self) -> DownloadPlatform;
 }
 
-pub type AdapterBox = Box<dyn Adapter>;
+pub type AdapterBox = Rc<dyn Adapter>;

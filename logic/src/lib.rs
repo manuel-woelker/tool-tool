@@ -7,7 +7,7 @@ pub mod hash;
 pub mod help;
 #[cfg(test)]
 pub(crate) mod mock_adapter;
-pub mod runner;
+pub mod runner_initial;
 #[cfg(test)]
 pub(crate) mod test_util;
 pub mod types;

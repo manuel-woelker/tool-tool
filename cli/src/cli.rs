@@ -20,7 +20,7 @@ pub fn run_cli() -> ToolToolResult<()> {
     let base_path = find_base_path()?;
     info!("Using base path: '{:?}'", base_path);
     let adapter = tool_tool_real_adapter::RealAdapter::new(base_path.to_path_buf());
-    let mut runner = tool_tool_logic::runner::ToolToolRunner::new(adapter);
+    let runner = tool_tool_logic::runner_initial::ToolToolRunnerInitial::new(adapter);
     runner.run();
     Ok(())
 }

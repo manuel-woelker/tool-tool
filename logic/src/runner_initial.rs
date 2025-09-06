@@ -10,18 +10,18 @@ use crate::workspace::Workspace;
 use kdl::KdlError;
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
+use std::rc::Rc;
 use tool_tool_base::logging::info;
 use tool_tool_base::result::ToolToolResult;
 use tool_tool_base::result::{Context, MietteReportError, ToolToolError};
 
-pub struct ToolToolRunner {
+pub struct ToolToolRunnerInitial {
     adapter: AdapterBox,
-    config: ToolToolConfiguration,
     #[allow(dead_code)]
     report_handler: GraphicalReportHandler,
 }
 
-impl ToolToolRunner {
+impl ToolToolRunnerInitial {
     pub fn new(adapter: impl Adapter) -> Self {
         let want_color = want_color(adapter.env());
         let theme = if want_color {
@@ -31,26 +31,25 @@ impl ToolToolRunner {
         };
         let report_handler = GraphicalReportHandler::new_themed(theme);
         Self {
-            adapter: Box::new(adapter),
-            config: ToolToolConfiguration::initial(),
+            adapter: Rc::new(adapter),
             report_handler,
         }
     }
-    pub fn run(&mut self) {
+    pub fn run(&self) {
         info!("Running tool-tool ({}):", get_version());
+        let adapter = self.adapter.clone();
         match self.run_inner() {
             Ok(()) => {}
             Err(err) => {
                 if let Err(print_err) = self.print_error(err) {
-                    self.adapter
-                        .print(&format!("ERROR: Failed to print error: {print_err}\n"));
+                    adapter.print(&format!("ERROR: Failed to print error: {print_err}\n"));
                 }
                 self.adapter.exit(1);
             }
         }
     }
 
-    fn print_error(&mut self, err: ToolToolError) -> ToolToolResult<()> {
+    fn print_error(&self, err: ToolToolError) -> ToolToolResult<()> {
         let mut message = format!("ERROR running tool-tool ({}): {err}\n", get_version());
 
         if err.source().is_some() {
@@ -73,7 +72,7 @@ impl ToolToolRunner {
         Ok(())
     }
 
-    pub fn run_inner(&mut self) -> ToolToolResult<()> {
+    pub fn run_inner(&self) -> ToolToolResult<()> {
         let args = self.adapter.args();
         parse_configuration_from_kdl(CONFIGURATION_FILE_NAME, "")?;
         let first_arg = args.get(1);
@@ -105,19 +104,18 @@ impl ToolToolRunner {
         Ok(())
     }
 
-    fn print_help(&mut self) {
+    fn print_help(&self) {
         print_help(self.adapter.as_ref());
     }
 
-    fn validate_config(&mut self) -> ToolToolResult<()> {
+    fn validate_config(&self) -> ToolToolResult<()> {
         self.load_config()
             .context("Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'")?;
         Ok(())
     }
 
-    fn expand_config(&mut self) -> ToolToolResult<()> {
-        self.load_config()?;
-        let config = &self.config;
+    fn expand_config(&self) -> ToolToolResult<()> {
+        let config = self.load_config()?;
         let mut output = String::new();
         output.push_str("Expanded tool-tool configuration:\n");
 
@@ -156,23 +154,22 @@ impl ToolToolRunner {
         Ok(())
     }
 
-    fn print_version(&mut self) {
+    fn print_version(&self) {
         self.adapter.print(&format!("{}\n", get_version()))
     }
 
-    fn download(&mut self) -> ToolToolResult<()> {
-        self.load_config()?;
+    fn download(&self) -> ToolToolResult<()> {
         run_download_task(&self.create_workspace()?)
     }
 
     fn create_workspace(&self) -> ToolToolResult<Workspace> {
-        // TODO: make inner runner with workspace?
-        Ok(Workspace::new(&self.config, self.adapter.as_ref()))
+        let config = load_config(self.adapter.as_ref())?;
+        let workspace = Workspace::new(config, self.adapter.clone());
+        Ok(workspace)
     }
 
-    fn load_config(&mut self) -> ToolToolResult<()> {
-        self.config = load_config(self.adapter.as_ref())?;
-        Ok(())
+    fn load_config(&self) -> ToolToolResult<ToolToolConfiguration> {
+        load_config(self.adapter.as_ref())
     }
 }
 
@@ -198,16 +195,16 @@ fn want_color(env: Vec<(String, String)>) -> bool {
 mod tests {
     use crate::configuration::platform::DownloadPlatform;
     use crate::mock_adapter::MockAdapter;
-    use crate::runner::ToolToolRunner;
+    use crate::runner_initial::ToolToolRunnerInitial;
     use crate::test_util::archive_builder::ArchiveBuilder;
     use crate::test_util::targz_builder::TarGzBuilder;
     use crate::test_util::zip_builder::ZipBuilder;
     use expect_test::expect;
     use tool_tool_base::result::ToolToolResult;
 
-    fn setup() -> (ToolToolRunner, MockAdapter) {
+    fn setup() -> (ToolToolRunnerInitial, MockAdapter) {
         let adapter = MockAdapter::new();
-        let runner = ToolToolRunner::new(adapter.clone());
+        let runner = ToolToolRunnerInitial::new(adapter.clone());
         (runner, adapter)
     }
 
@@ -228,7 +225,7 @@ mod tests {
 
     #[test]
     fn print_help() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_args(&["--help"]);
         runner.run();
 
@@ -270,7 +267,7 @@ mod tests {
 
     #[test]
     fn print_version() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_args(&["--version"]);
         runner.run();
 
@@ -284,7 +281,7 @@ mod tests {
 
     #[test]
     fn handle_unknown_argument() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_args(&["--missing"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
@@ -299,7 +296,7 @@ mod tests {
 
     #[test]
     fn validate_config_success() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
@@ -310,7 +307,7 @@ mod tests {
 
     #[test]
     fn download_zip() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_url("https://example.com/test-1.2.3.zip", build_test_zip()?);
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["--download"]);
@@ -336,7 +333,7 @@ mod tests {
 
     #[test]
     fn download_targz() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_url("https://example.com/test-1.2.3.tar.gz", build_test_targz()?);
         adapter.set_platform(DownloadPlatform::Linux);
         adapter.set_args(&["--download"]);
@@ -362,7 +359,7 @@ mod tests {
 
     #[test]
     fn expand_config() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
@@ -386,7 +383,7 @@ mod tests {
 
     #[test]
     fn expand_config_with_syntax_error() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_configuration(r#"tools {"#);
         adapter.set_args(&["--expand-config"]);
         runner.run();
@@ -415,7 +412,7 @@ mod tests {
 
     #[test]
     fn validate_config_with_unexpected_toplevel_item() -> ToolToolResult<()> {
-        let (mut runner, adapter) = setup();
+        let (runner, adapter) = setup();
         adapter.set_configuration(r#"foo"#);
         adapter.set_args(&["--validate"]);
         runner.run();

@@ -29,12 +29,6 @@ pub struct ToolToolConfiguration {
     pub tools: Vec<ToolConfiguration>,
 }
 
-impl ToolToolConfiguration {
-    pub(crate) fn initial() -> Self {
-        Self { tools: Vec::new() }
-    }
-}
-
 impl Display for DownloadArtifact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.url)

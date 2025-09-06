@@ -51,15 +51,16 @@ mod tests {
     use super::*;
     use crate::configuration::{CHECKSUM_FILE_NAME, TOOL_TOOL_DIRECTORY};
     use crate::mock_adapter::MockAdapter;
-    use crate::runner::load_config;
+    use crate::runner_initial::load_config;
     use expect_test::expect;
+    use std::rc::Rc;
 
     #[test]
     fn test_load_checksums_no_file() -> ToolToolResult<()> {
         let adapter = MockAdapter::new();
         let config = load_config(&adapter)?;
 
-        let workspace = Workspace::new(&config, &adapter);
+        let workspace = Workspace::new(config, Rc::new(adapter));
         let checksums = load_checksums(&workspace)?;
         expect![[r#"
             Checksums {
@@ -84,7 +85,7 @@ mod tests {
 
         let config = load_config(&adapter)?;
 
-        let workspace = Workspace::new(&config, &adapter);
+        let workspace = Workspace::new(config, Rc::new(adapter));
         let checksums = load_checksums(&workspace)?;
         expect![[r#"
             Checksums {
