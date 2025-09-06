@@ -1,17 +1,16 @@
 use crate::configuration;
 use crate::workspace::Workspace;
-use kdl::KdlDocument;
+use kdl::{KdlDocument, KdlNode};
 use std::collections::BTreeMap;
 use tool_tool_base::result::{Context, ToolToolResult, bail, err};
 use tracing::info;
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Checksums {
-    #[allow(dead_code)]
-    sha512sums: BTreeMap<String, String>,
+    pub(crate) sha512sums: BTreeMap<String, String>,
 }
 
-pub fn load_checksums(workspace: &Workspace) -> ToolToolResult<Checksums> {
+pub fn load_checksums(workspace: &mut Workspace) -> ToolToolResult<()> {
     let checksums_filename = workspace
         .tool_tool_dir()
         .join(configuration::CHECKSUM_FILE_NAME);
@@ -42,8 +41,27 @@ pub fn load_checksums(workspace: &Workspace) -> ToolToolResult<Checksums> {
         info!("Checksums file '{checksums_filename}' creating a new one");
     }
 
-    let checksums = Checksums { sha512sums };
-    Ok(checksums)
+    workspace.checksums = Checksums { sha512sums };
+    Ok(())
+}
+
+pub fn save_checksums(workspace: &Workspace) -> ToolToolResult<()> {
+    let checksums_filename = workspace
+        .tool_tool_dir()
+        .join(configuration::CHECKSUM_FILE_NAME);
+    let mut document = KdlDocument::new();
+    let mut children = KdlDocument::new();
+    for (url, checksum) in workspace.checksums.sha512sums.iter() {
+        let mut entry = KdlNode::new(url.as_str());
+        entry.insert(0, checksum.as_str());
+        children.nodes_mut().push(entry);
+    }
+    let mut sums_node = KdlNode::new("sha512sums");
+    sums_node.set_children(children);
+    document.nodes_mut().push(sums_node);
+    let mut checksums_file = workspace.adapter().create_file(&checksums_filename)?;
+    checksums_file.write_all(document.to_string().as_bytes())?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -60,14 +78,14 @@ mod tests {
         let adapter = MockAdapter::new();
         let config = load_config(&adapter)?;
 
-        let workspace = Workspace::new(config, Rc::new(adapter));
-        let checksums = load_checksums(&workspace)?;
+        let mut workspace = Workspace::new(config, Rc::new(adapter));
+        load_checksums(&mut workspace)?;
         expect![[r#"
             Checksums {
                 sha512sums: {},
             }
         "#]]
-        .assert_debug_eq(&checksums);
+        .assert_debug_eq(&workspace.checksums);
         Ok(())
     }
 
@@ -85,8 +103,8 @@ mod tests {
 
         let config = load_config(&adapter)?;
 
-        let workspace = Workspace::new(config, Rc::new(adapter));
-        let checksums = load_checksums(&workspace)?;
+        let mut workspace = Workspace::new(config, Rc::new(adapter));
+        load_checksums(&mut workspace)?;
         expect![[r#"
             Checksums {
                 sha512sums: {
@@ -94,7 +112,7 @@ mod tests {
                 },
             }
         "#]]
-        .assert_debug_eq(&checksums);
+        .assert_debug_eq(&workspace.checksums);
         Ok(())
     }
 }

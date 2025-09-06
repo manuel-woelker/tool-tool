@@ -2,7 +2,7 @@ use crate::test_util::archive_builder::ArchiveBuilder;
 use std::io::{Cursor, Write};
 use tool_tool_base::result::ToolToolResult;
 use zip::write::SimpleFileOptions;
-use zip::{ZipArchive, ZipWriter};
+use zip::{DateTime, ZipArchive, ZipWriter};
 
 pub struct ZipBuilder {
     zip_writer: ZipWriter<Cursor<Vec<u8>>>,
@@ -15,17 +15,21 @@ impl Default for ZipBuilder {
     }
 }
 
+fn create_file_options() -> SimpleFileOptions {
+    SimpleFileOptions::default().last_modified_time(DateTime::default())
+}
+
 impl ArchiveBuilder for ZipBuilder {
     fn add_file(&mut self, path: impl AsRef<str>, content: impl AsRef<[u8]>) -> ToolToolResult<()> {
         self.zip_writer
-            .start_file(path.as_ref().to_string(), SimpleFileOptions::default())?;
+            .start_file(path.as_ref().to_string(), create_file_options())?;
         self.zip_writer.write_all(content.as_ref())?;
         Ok(())
     }
 
     fn add_directory(&mut self, path: impl AsRef<str>) -> ToolToolResult<()> {
         self.zip_writer
-            .add_directory(path.as_ref().to_string(), SimpleFileOptions::default())?;
+            .add_directory(path.as_ref().to_string(), create_file_options())?;
         Ok(())
     }
 

@@ -1,3 +1,4 @@
+use crate::checksums::save_checksums;
 use crate::configuration::platform::DownloadPlatform;
 use crate::file_type::{FileType, get_file_type_from_url};
 use crate::hash::compute_sha512;
@@ -7,8 +8,9 @@ use relative_path::RelativePathBuf;
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
 
-pub fn run_download_task(workspace: &Workspace) -> ToolToolResult<()> {
+pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
     let adapter = workspace.adapter();
+    let mut new_sha512sums = workspace.checksums.sha512sums.clone();
     // create .tool-tool directory if it doesn't exist
     let tool_tool_dir = workspace.tool_tool_dir();
     // TODO: make random temp dir
@@ -17,6 +19,7 @@ pub fn run_download_task(workspace: &Workspace) -> ToolToolResult<()> {
     adapter.create_directory_all(&tool_tool_dir)?;
     let host_platform = adapter.get_platform();
     let config = workspace.config();
+    // Download artifacts for current host
     for tool in config.tools.iter() {
         let tool_path = tool_tool_dir.join(format!("{}-{}", tool.name, tool.version));
         adapter.create_directory_all(&tool_path)?;
@@ -34,7 +37,10 @@ pub fn run_download_task(workspace: &Workspace) -> ToolToolResult<()> {
                     tool.name
                 )
             })?;
-        let download_path = temp_dir.join(format!("download-{}-{}", tool.name, tool.version));
+        let download_path = temp_dir.join(format!(
+            "download-{}-{}-{}",
+            tool.name, tool.version, tool_platform
+        ));
         adapter.download_file(&download_artifact.url, &download_path)?;
         let mut download_file = adapter.read_file(&download_path)?;
         // TODO: compute and verify checksum
@@ -54,6 +60,26 @@ pub fn run_download_task(workspace: &Workspace) -> ToolToolResult<()> {
                 todo!()
             }
         }
+    }
+
+    // Download missing artifacts to complete checksums
+    for tool in config.tools.iter() {
+        for (platform, artifact) in tool.download_urls.iter() {
+            if !new_sha512sums.contains_key(&artifact.url) {
+                let download_path = temp_dir.join(format!(
+                    "download-{}-{}-{}",
+                    tool.name, tool.version, platform
+                ));
+                adapter.download_file(&artifact.url, &download_path)?;
+                let mut download_file = adapter.read_file(&download_path)?;
+                let sha512 = compute_sha512(download_file.as_mut())?;
+                new_sha512sums.insert(artifact.url.clone(), sha512);
+            }
+        }
+    }
+    if new_sha512sums != workspace.checksums.sha512sums {
+        workspace.checksums.sha512sums = new_sha512sums;
+        save_checksums(workspace)?;
     }
     Ok(())
 }
