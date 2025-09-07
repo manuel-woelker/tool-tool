@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use tool_tool_base::result::{Context, ToolToolResult};
-use tool_tool_logic::adapter::{Adapter, ReadSeek};
+use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::FilePath;
 
@@ -81,6 +81,10 @@ impl Adapter for RealAdapter {
         return DownloadPlatform::Linux;
         #[cfg(target_os = "windows")]
         return DownloadPlatform::Windows;
+    }
+
+    fn execute(&self, _request: ExecutionRequest) -> ToolToolResult<()> {
+        todo!()
     }
 }
 

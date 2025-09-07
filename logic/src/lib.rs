@@ -2,6 +2,7 @@ pub mod adapter;
 pub mod checksums;
 pub mod configuration;
 mod download_task;
+pub mod execute_tool;
 pub mod file_type;
 pub mod hash;
 pub mod help;

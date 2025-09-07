@@ -1,4 +1,4 @@
-use crate::adapter::{Adapter, ReadSeek};
+use crate::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use crate::configuration::CONFIGURATION_FILE_NAME;
 use crate::configuration::platform::DownloadPlatform;
 use crate::types::FilePath;
@@ -37,7 +37,7 @@ impl MockAdapter {
                             }
                             commands {
                                 foobar "echo foobar"
-                                bar "echo bar"
+                                bar "fizz buzz"
                             }
                             env {
                                 FROBNIZZ "nizzle"
@@ -171,6 +171,11 @@ impl Adapter for MockAdapter {
 
     fn get_platform(&self) -> DownloadPlatform {
         self.read().platform
+    }
+
+    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
+        self.log_effect(format!("EXECUTE: {}", request.binary_path));
+        Ok(())
     }
 }
 

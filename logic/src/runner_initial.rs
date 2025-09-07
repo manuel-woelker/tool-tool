@@ -4,6 +4,7 @@ use crate::configuration::expand_config::expand_configuration_template_expressio
 use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::download_task::run_download_task;
+use crate::execute_tool::execute_tool;
 use crate::help::print_help;
 use crate::types::FilePath;
 use crate::version::get_version;
@@ -98,11 +99,21 @@ impl ToolToolRunnerInitial {
                 self.print_version();
             }
             other => {
-                self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
-                self.adapter.exit(1);
+                if other.starts_with('-') {
+                    self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
+                    self.adapter.exit(1);
+                } else {
+                    self.execute_tool()?;
+                }
             }
         }
         Ok(())
+    }
+
+    fn execute_tool(&self) -> ToolToolResult<()> {
+        let mut workspace = self.create_workspace()?;
+        run_download_task(&mut workspace)?;
+        execute_tool(&mut workspace)
     }
 
     fn print_help(&self) {
@@ -479,6 +490,41 @@ mod tests {
     }
 
     #[test]
+    fn run_tool() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_platform(DownloadPlatform::Windows);
+        adapter.set_args(&["bar"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
+            CREATE FILE: .tool-tool/v2/checksums.kdl
+            WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
+            "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
+            "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            }
+
+            EXECUTE: .tool-tool/v2/lsd-1.2.3/fizz buzz
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
     fn expand_config() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_args(&["--expand-config"]);
@@ -492,7 +538,7 @@ mod tests {
             				linux:   https://example.com/test-1.2.3.tar.gz
             				windows: https://example.com/test-1.2.3.zip
             			commands:
-            				bar:    echo bar
+            				bar:    fizz buzz
             				foobar: echo foobar
             			env:
             				FIZZ:     buzz

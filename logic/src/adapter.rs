@@ -58,9 +58,18 @@ pub trait Adapter: Debug + 'static {
     fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()>;
 
     /**
-        Get the currently runningplatform
+        Get the currently running platform
     */
     fn get_platform(&self) -> DownloadPlatform;
+
+    /**
+    Execute the given binary with the given arguments
+    */
+    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()>;
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;
+
+pub struct ExecutionRequest {
+    pub binary_path: FilePath,
+}
