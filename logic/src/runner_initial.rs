@@ -339,14 +339,107 @@ mod tests {
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             CREATE FILE: .tool-tool/v2/checksums.kdl
             WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
             "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
             "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
             }
 
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn download_zip_with_checksums() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_file(".tool-tool/v2/checksums.kdl", r#"
+            sha512sums{
+                "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
+                "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            }
+        "#);
+        adapter.set_platform(DownloadPlatform::Windows);
+        adapter.set_args(&["--download"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn download_zip_with_wrong_checksum() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_file(".tool-tool/v2/checksums.kdl", r#"
+            sha512sums{
+                "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
+                "https://example.com/test-1.2.3.zip" wrong_checksum
+            }
+        "#);
+        adapter.set_platform(DownloadPlatform::Windows);
+        adapter.set_args(&["--download"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            PRINT:
+            	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
+            	Expected: wrong_checksum
+            	Actual:   fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+
+            EXIT: 1
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn download_zip_with_wrong_targz_checksum() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_file(".tool-tool/v2/checksums.kdl", r#"
+            sha512sums{
+                // Other platforms are not checked
+                "https://example.com/test-1.2.3.tar.gz" wrong_checksum
+                "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            }
+        "#);
+        adapter.set_platform(DownloadPlatform::Windows);
+        adapter.set_args(&["--download"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
         "#]]);
         Ok(())
     }
@@ -373,8 +466,6 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
-            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
-            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             CREATE FILE: .tool-tool/v2/checksums.kdl

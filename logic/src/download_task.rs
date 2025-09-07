@@ -7,10 +7,12 @@ use flate2::read::GzDecoder;
 use relative_path::RelativePathBuf;
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
+use tracing::info;
 
 pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
     let adapter = workspace.adapter();
-    let mut new_sha512sums = workspace.checksums.sha512sums.clone();
+    let sha512sums = &workspace.checksums.sha512sums;
+    let mut new_sha512sums = sha512sums.clone();
     // create .tool-tool directory if it doesn't exist
     let tool_tool_dir = workspace.tool_tool_dir();
     // TODO: make random temp dir
@@ -43,8 +45,24 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
         ));
         adapter.download_file(&download_artifact.url, &download_path)?;
         let mut download_file = adapter.read_file(&download_path)?;
-        // TODO: compute and verify checksum
-        let _sha512 = compute_sha512(download_file.as_mut())?;
+        // Compute and verify checksum
+        let sha512 = compute_sha512(download_file.as_mut())?;
+        if let Some(expected_sha512) = sha512sums.get(&download_artifact.url) {
+            if sha512 != *expected_sha512 {
+                return Err(err!(
+                    "Checksum mismatch for tool '{}'\nExpected: {}\nActual:   {}",
+                    tool.name,
+                    expected_sha512,
+                    sha512
+                ));
+            }
+        } else {
+            info!(
+                "Checksum not found for tool '{}' ({}) adding it",
+                tool.name, tool_platform
+            );
+            new_sha512sums.insert(download_artifact.url.clone(), sha512);
+        }
 
         // get file type
         adapter.delete_directory_all(&tool_path)?;
@@ -77,7 +95,7 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
             }
         }
     }
-    if new_sha512sums != workspace.checksums.sha512sums {
+    if &new_sha512sums != sha512sums {
         workspace.checksums.sha512sums = new_sha512sums;
         save_checksums(workspace)?;
     }
