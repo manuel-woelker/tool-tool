@@ -4,7 +4,8 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use tool_tool_base::result::{Context, ToolToolResult};
+use std::process::Command;
+use tool_tool_base::result::{Context, ToolToolResult, bail};
 use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::FilePath;
@@ -83,8 +84,16 @@ impl Adapter for RealAdapter {
         return DownloadPlatform::Windows;
     }
 
-    fn execute(&self, _request: ExecutionRequest) -> ToolToolResult<()> {
-        todo!()
+    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
+        let path = self.resolve_path(&request.binary_path)?;
+        dbg!(&path);
+        let mut command = Command::new(path);
+        command.env_clear();
+        let status = command.status()?;
+        if !status.success() {
+            bail!("Command failed with exit code {}", status.code().unwrap());
+        }
+        Ok(())
     }
 }
 

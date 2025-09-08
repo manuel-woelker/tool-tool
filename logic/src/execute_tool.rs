@@ -1,4 +1,5 @@
 use crate::adapter::ExecutionRequest;
+use crate::configuration::platform::DownloadPlatform;
 use crate::workspace::Workspace;
 use tool_tool_base::result::{ToolToolResult, bail};
 
@@ -16,10 +17,18 @@ pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
         bail!("No tool found for command '{}'", command_name);
     };
     let command_config = tool_config.commands.get(&command_name).unwrap();
-    let tool_path = workspace
-        .tool_tool_dir()
-        .join(format!("{}-{}", tool_config.name, tool_config.version));
-    let binary_path = tool_path.join(command_config);
+    // TODO: improve extension handling
+    let extension = match workspace.adapter().get_platform() {
+        DownloadPlatform::Default => unreachable!("Default platform should not be used here"),
+        DownloadPlatform::Windows => ".exe",
+        DownloadPlatform::Linux => "",
+        DownloadPlatform::MacOS => "",
+    };
+    // TODO: split binary from command arguments
+    let binary_path = workspace.tool_tool_dir().join(format!(
+        "{}-{}/{}{}",
+        tool_config.name, tool_config.version, command_config, extension
+    ));
     workspace
         .adapter()
         .execute(ExecutionRequest { binary_path })?;

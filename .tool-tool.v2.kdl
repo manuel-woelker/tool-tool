@@ -6,7 +6,7 @@ tools {
 			windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
 		}
 		commands {
-			lsd "bin/lsd"
+			lsd "lsd"
 		}
 		env {
 		}

@@ -519,7 +519,7 @@ mod tests {
             "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
             }
 
-            EXECUTE: .tool-tool/v2/lsd-1.2.3/fizz buzz
+            EXECUTE: .tool-tool/v2/lsd-1.2.3/fizz buzz.exe
         "#]]);
         Ok(())
     }
