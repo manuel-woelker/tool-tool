@@ -4,7 +4,6 @@ use tool_tool_base::result::{ToolToolError, bail};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub enum DownloadPlatform {
-    Default,
     Linux,
     MacOS,
     Windows,
@@ -13,7 +12,6 @@ pub enum DownloadPlatform {
 impl DownloadPlatform {
     pub fn as_str(&self) -> &'static str {
         match self {
-            DownloadPlatform::Default => "default",
             DownloadPlatform::Windows => "windows",
             DownloadPlatform::Linux => "linux",
             DownloadPlatform::MacOS => "macos",
@@ -22,7 +20,6 @@ impl DownloadPlatform {
 
     pub fn get_executable_extensions(&self) -> &'static [&'static str] {
         match self {
-            DownloadPlatform::Default => unreachable!("Default platform should not be used here"),
             DownloadPlatform::Windows => &[".exe", ".bat", ".cmd"],
             DownloadPlatform::Linux => &[""],
             DownloadPlatform::MacOS => &[""],
@@ -33,7 +30,6 @@ impl FromStr for DownloadPlatform {
     type Err = ToolToolError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "default" => Ok(DownloadPlatform::Default),
             "windows" => Ok(DownloadPlatform::Windows),
             "linux" => Ok(DownloadPlatform::Linux),
             "macos" => Ok(DownloadPlatform::MacOS),

@@ -1,5 +1,4 @@
 use crate::checksums::save_checksums;
-use crate::configuration::platform::DownloadPlatform;
 use crate::file_type::{FileType, get_file_type_from_url};
 use crate::hash::compute_sha512;
 use crate::workspace::Workspace;
@@ -25,14 +24,10 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
     for tool in config.tools.iter() {
         let tool_path = tool_tool_dir.join(format!("{}-{}", tool.name, tool.version));
         adapter.create_directory_all(&tool_path)?;
-        let mut tool_platform = host_platform;
         let download_artifact = tool
             .download_urls
-            .get(&tool_platform)
-            .or_else(|| {
-                tool_platform = DownloadPlatform::Default;
-                tool.download_urls.get(&tool_platform)
-            })
+            .get(&host_platform)
+            .or(tool.default_download_artifact.as_ref())
             .ok_or_else(|| {
                 err!(
                     "No download url found for tool '{}' on platform '{host_platform}'",
@@ -41,7 +36,7 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
             })?;
         let download_path = temp_dir.join(format!(
             "download-{}-{}-{}",
-            tool.name, tool.version, tool_platform
+            tool.name, tool.version, host_platform
         ));
         adapter.download_file(&download_artifact.url, &download_path)?;
         let mut download_file = adapter.read_file(&download_path)?;
@@ -59,7 +54,7 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
         } else {
             info!(
                 "Checksum not found for tool '{}' ({}) adding it",
-                tool.name, tool_platform
+                tool.name, host_platform
             );
             new_sha512sums.insert(download_artifact.url.clone(), sha512);
         }

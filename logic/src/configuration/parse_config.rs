@@ -68,6 +68,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
     let mut download_urls = BTreeMap::new();
     let mut commands = BTreeMap::new();
     let mut env = BTreeMap::new();
+    let mut default_download_artifact = None;
     for tool_child in children(tool_node) {
         match tool_child.name().value() {
             "download" => {
@@ -80,8 +81,12 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
                         .as_string()
                         .expect("Expected download url to be a string")
                         .to_string();
-                    download_urls
-                        .insert(DownloadPlatform::from_str(&os)?, DownloadArtifact { url });
+                    if os == "default" {
+                        default_download_artifact = Some(DownloadArtifact { url });
+                    } else {
+                        download_urls
+                            .insert(DownloadPlatform::from_str(&os)?, DownloadArtifact { url });
+                    }
                 }
             }
             "commands" => {
@@ -132,6 +137,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
     let tool = ToolConfiguration {
         name,
         version: version.to_string(),
+        default_download_artifact,
         download_urls,
         commands,
         env,
@@ -195,6 +201,7 @@ mod tests {
                     ToolConfiguration {
                         name: "lsd",
                         version: "0.17.0",
+                        default_download_artifact: None,
                         download_urls: {},
                         commands: {},
                         env: {},
@@ -220,6 +227,7 @@ mod tests {
                     ToolConfiguration {
                         name: "lsd",
                         version: "0.17.0",
+                        default_download_artifact: None,
                         download_urls: {
                             Linux: DownloadArtifact {
                                 url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
@@ -257,11 +265,12 @@ mod tests {
                     ToolConfiguration {
                         name: "lsd",
                         version: "0.17.0",
-                        download_urls: {
-                            Default: DownloadArtifact {
+                        default_download_artifact: Some(
+                            DownloadArtifact {
                                 url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
                             },
-                        },
+                        ),
+                        download_urls: {},
                         commands: {
                             "foo": "echo foo",
                         },

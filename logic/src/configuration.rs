@@ -19,6 +19,7 @@ pub struct DownloadArtifact {
 pub struct ToolConfiguration {
     pub name: String,
     pub version: String,
+    pub default_download_artifact: Option<DownloadArtifact>,
     pub download_urls: BTreeMap<DownloadPlatform, DownloadArtifact>,
     pub commands: BTreeMap<String, String>,
     pub env: BTreeMap<String, String>,
