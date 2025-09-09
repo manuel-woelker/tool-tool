@@ -19,6 +19,15 @@ impl DownloadPlatform {
             DownloadPlatform::MacOS => "macos",
         }
     }
+
+    pub fn get_executable_extensions(&self) -> &'static [&'static str] {
+        match self {
+            DownloadPlatform::Default => unreachable!("Default platform should not be used here"),
+            DownloadPlatform::Windows => &[".exe", ".bat", ".cmd"],
+            DownloadPlatform::Linux => &[""],
+            DownloadPlatform::MacOS => &[""],
+        }
+    }
 }
 impl FromStr for DownloadPlatform {
     type Err = ToolToolError;

@@ -25,6 +25,11 @@ pub trait Adapter: Debug + 'static {
     */
     fn print(&self, message: &str);
 
+    /**
+    Check if a file exists
+    */
+    fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool>;
+
     /*
        Read a file, the path is relative to parent directory of the tool-tool binary
     */

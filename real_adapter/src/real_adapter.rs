@@ -41,6 +41,11 @@ impl Adapter for RealAdapter {
         eprintln!("{message}");
     }
 
+    fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool> {
+        let physical_path = self.resolve_path(path)?;
+        Ok(physical_path.exists())
+    }
+
     fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
         let physical_path = self.resolve_path(path)?;
         Ok(Box::new(File::open(&physical_path).with_context(|| {

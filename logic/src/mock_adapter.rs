@@ -125,6 +125,11 @@ impl Adapter for MockAdapter {
         self.log_effect(format!("PRINT:\n{}", indent_all_with("\t", message)));
     }
 
+    fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool> {
+        self.log_effect(format!("FILE EXISTS?:\n{}", path));
+        Ok(self.read().file_map.contains_key(path))
+    }
+
     fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
         self.log_effect(format!("READ FILE: {path}"));
         Ok(Box::new(Cursor::new(
