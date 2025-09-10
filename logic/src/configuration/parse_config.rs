@@ -15,7 +15,7 @@ pub fn parse_configuration_from_kdl(
     kdl: &str,
 ) -> ToolToolResult<ToolToolConfiguration> {
     info!("Parsing KDL file '{filename}'");
-    let _span = info_span!("Parse configuration from KDL", filename).entered();
+    let _span = info_span!("Parse configuration from KDL ", filename).entered();
     (|| -> ToolToolResult<ToolToolConfiguration> {
         let mut tools = vec![];
         let result = kdl

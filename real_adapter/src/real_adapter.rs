@@ -91,7 +91,6 @@ impl Adapter for RealAdapter {
 
     fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
         let path = self.resolve_path(&request.binary_path)?;
-        dbg!(&path);
         let mut command = Command::new(path);
         command.env_clear();
         command.args(request.args);

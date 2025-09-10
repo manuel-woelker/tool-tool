@@ -4,10 +4,10 @@ use shellish_parse::ParseOptions;
 use tool_tool_base::result::{Context, ToolToolResult, bail};
 
 pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
-    let mut args = workspace.adapter().args();
+    let mut command_args = workspace.adapter().args();
     // remove the tool-tool binary name
-    args.remove(0);
-    let command_name = args.remove(0);
+    command_args.remove(0);
+    let command_name = command_args.remove(0);
     let config = workspace.config();
     let Some(tool_config) = config
         .tools
@@ -60,9 +60,10 @@ pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
             });
         }
     };
-    workspace.adapter().execute(ExecutionRequest {
-        binary_path,
-        args: parsed_command,
-    })?;
+    let mut args = parsed_command;
+    args.extend(command_args);
+    workspace
+        .adapter()
+        .execute(ExecutionRequest { binary_path, args })?;
     Ok(())
 }
