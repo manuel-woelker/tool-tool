@@ -336,9 +336,9 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             DELETE DIR: .tool-tool/v2/lsd-1.2.3
@@ -352,6 +352,8 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             CREATE FILE: .tool-tool/v2/checksums.kdl
@@ -360,6 +362,54 @@ mod tests {
             "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn download_zip_twice() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_platform(DownloadPlatform::Windows);
+        adapter.set_args(&["--download"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
+            CREATE FILE: .tool-tool/v2/checksums.kdl
+            WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
+            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
+            }
+
+        "#]]);
+        // Second time through, ensure we don't download again
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            FILE EXISTS?:
+            .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
         "#]]);
         Ok(())
     }
@@ -379,9 +429,11 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            FILE EXISTS?:
+            .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             PRINT:
@@ -409,9 +461,11 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            FILE EXISTS?:
+            .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             PRINT:
@@ -440,9 +494,11 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            FILE EXISTS?:
+            .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             PRINT:
@@ -464,9 +520,9 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             DELETE DIR: .tool-tool/v2/lsd-1.2.3
@@ -480,6 +536,8 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512 -> e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             CREATE FILE: .tool-tool/v2/checksums.kdl
@@ -501,9 +559,9 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             DELETE DIR: .tool-tool/v2/lsd-1.2.3
@@ -517,6 +575,8 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             CREATE FILE: .tool-tool/v2/checksums.kdl
@@ -548,9 +608,9 @@ mod tests {
         adapter.verify_effects(expect![[r#"
             READ FILE: .tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            CREATE DIR: .tool-tool/v2/tmp
-            CREATE DIR: .tool-tool/v2/
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE DIR: .tool-tool/v2/tmp
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             DELETE DIR: .tool-tool/v2/lsd-1.2.3
@@ -564,6 +624,8 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             CREATE FILE: .tool-tool/v2/checksums.kdl

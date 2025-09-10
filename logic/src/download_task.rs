@@ -4,6 +4,7 @@ use crate::hash::compute_sha512;
 use crate::workspace::Workspace;
 use flate2::read::GzDecoder;
 use relative_path::RelativePathBuf;
+use std::io::Read;
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
 use tracing::info;
@@ -16,14 +17,11 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
     let tool_tool_dir = workspace.tool_tool_dir();
     // TODO: make random temp dir
     let temp_dir = tool_tool_dir.join("tmp");
-    adapter.create_directory_all(&temp_dir)?;
-    adapter.create_directory_all(&tool_tool_dir)?;
     let host_platform = adapter.get_platform();
     let config = workspace.config();
     // Download artifacts for current host
     for tool in config.tools.iter() {
         let tool_path = tool_tool_dir.join(format!("{}-{}", tool.name, tool.version));
-        adapter.create_directory_all(&tool_path)?;
         let download_artifact = tool
             .download_urls
             .get(&host_platform)
@@ -34,6 +32,24 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
                     tool.name
                 )
             })?;
+        // Determine if tool is already downloaded
+        let checksum_path = tool_path.join(".tool-tool.sha512");
+        if let Some(expected_sha512) = sha512sums.get(&download_artifact.url) {
+            if adapter.file_exists(&checksum_path)? {
+                let mut checksum_file = adapter.read_file(&checksum_path)?;
+                let mut checksum = String::new();
+                checksum_file.read_to_string(&mut checksum)?;
+                if checksum != *expected_sha512 {
+                    info!("Checksum mismatch for tool '{}', re-downloading", tool.name);
+                } else {
+                    info!("Checksum match for tool '{}', skipping download", tool.name);
+                    continue;
+                }
+            }
+        }
+        adapter.delete_directory_all(&tool_path)?;
+        adapter.create_directory_all(&tool_path)?;
+        adapter.create_directory_all(&temp_dir)?;
         let download_path = temp_dir.join(format!(
             "download-{}-{}-{}",
             tool.name, tool.version, host_platform
@@ -56,7 +72,7 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
                 "Checksum not found for tool '{}' ({}) adding it",
                 tool.name, host_platform
             );
-            new_sha512sums.insert(download_artifact.url.clone(), sha512);
+            new_sha512sums.insert(download_artifact.url.clone(), sha512.clone());
         }
 
         // get file type
@@ -73,6 +89,10 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
                 todo!()
             }
         }
+
+        // Last step is to create the checksum file
+        let mut checksum_file = adapter.create_file(&checksum_path)?;
+        checksum_file.write_all(sha512.as_bytes())?;
     }
 
     // Download missing artifacts to complete checksums

@@ -107,6 +107,7 @@ impl MockAdapter {
 
     pub fn verify_effects(&self, expected: Expect) {
         expected.assert_eq(&self.read().effects_string);
+        self.write().effects_string.clear();
     }
 
     #[allow(dead_code)]
