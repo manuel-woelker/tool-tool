@@ -94,6 +94,7 @@ impl Adapter for RealAdapter {
         dbg!(&path);
         let mut command = Command::new(path);
         command.env_clear();
+        command.args(request.args);
         let status = command.status()?;
         if !status.success() {
             bail!("Command failed with exit code {}", status.code().unwrap());

@@ -77,4 +77,5 @@ pub type AdapterBox = Rc<dyn Adapter>;
 
 pub struct ExecutionRequest {
     pub binary_path: FilePath,
+    pub args: Vec<String>,
 }

@@ -28,6 +28,8 @@ pub fn load_checksums(workspace: &mut Workspace) -> ToolToolResult<()> {
                         let checksum = child
                             .get(0)
                             .ok_or_else(|| err!("expected checksum"))?
+                            .as_string()
+                            .ok_or_else(|| err!("expected checksum to be a string"))?
                             .to_string();
                         sha512sums.insert(url, checksum);
                     }
@@ -53,7 +55,7 @@ pub fn save_checksums(workspace: &Workspace) -> ToolToolResult<()> {
     let mut children = KdlDocument::new();
     for (url, checksum) in workspace.checksums.sha512sums.iter() {
         let mut entry = KdlNode::new(url.as_str());
-        entry.insert(0, checksum.as_str());
+        entry.insert(0, checksum.clone());
         children.nodes_mut().push(entry);
     }
     let mut sums_node = KdlNode::new("sha512sums");

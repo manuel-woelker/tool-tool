@@ -1,5 +1,6 @@
 use crate::adapter::ExecutionRequest;
 use crate::workspace::Workspace;
+use shellish_parse::ParseOptions;
 use tool_tool_base::result::{Context, ToolToolResult, bail};
 
 pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
@@ -21,8 +22,9 @@ pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
         .adapter()
         .get_platform()
         .get_executable_extensions();
-    // TODO: split binary from command arguments
-    let binary = command_config;
+    // TODO: handle whitespace in strings
+    let mut parsed_command = shellish_parse::parse(command_config, ParseOptions::new())?;
+    let binary = parsed_command.remove(0);
     let tool_path = workspace
         .tool_tool_dir()
         .join(format!("{}-{}", tool_config.name, tool_config.version));
@@ -58,8 +60,9 @@ pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
             });
         }
     };
-    workspace
-        .adapter()
-        .execute(ExecutionRequest { binary_path })?;
+    workspace.adapter().execute(ExecutionRequest {
+        binary_path,
+        args: parsed_command,
+    })?;
     Ok(())
 }

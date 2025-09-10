@@ -240,6 +240,7 @@ mod tests {
     fn build_archive<T: ArchiveBuilder>() -> ToolToolResult<Vec<u8>> {
         let mut archive_builder = T::default();
         archive_builder.add_file("upper/foo", b"bar")?;
+        archive_builder.add_file("upper/tooly.exe", b"# just a tool")?;
         archive_builder.add_file("upper/fizz/buzz", b"bizz")?;
         Ok(archive_builder.build()?)
     }
@@ -345,6 +346,9 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe -> # just a tool
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
@@ -352,8 +356,8 @@ mod tests {
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             CREATE FILE: .tool-tool/v2/checksums.kdl
             WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
-            "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
-            "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
         "#]]);
@@ -380,14 +384,12 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/lsd-1.2.3
-            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            PRINT:
+            	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
+            	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -415,7 +417,7 @@ mod tests {
             PRINT:
             	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
             	Expected: wrong_checksum
-            	Actual:   fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
 
             EXIT: 1
         "#]]);
@@ -443,14 +445,12 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/lsd-1.2.3
-            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            PRINT:
+            	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
+            	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -474,6 +474,9 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe -> # just a tool
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
@@ -481,8 +484,8 @@ mod tests {
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
             CREATE FILE: .tool-tool/v2/checksums.kdl
             WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
-            "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
-            "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
         "#]]);
@@ -490,7 +493,7 @@ mod tests {
     }
 
     #[test]
-    fn run_tool() -> ToolToolResult<()> {
+    fn run_tool_binary_not_found() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["bar"]);
@@ -508,6 +511,9 @@ mod tests {
             CREATE DIR: .tool-tool/v2/lsd-1.2.3
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe -> # just a tool
             CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
             CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
             WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
@@ -515,20 +521,61 @@ mod tests {
             READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
             CREATE FILE: .tool-tool/v2/checksums.kdl
             WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
-            "https://example.com/test-1.2.3.tar.gz" c8c4fd942d21f30798773b441950f6febadbf5e6d965e65aa718a45d83e13f7df952ead930f3b72d02cdc7befefc94758453882f43744d8a003aa5449ed3d8f6
-            "https://example.com/test-1.2.3.zip" fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
+            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
             FILE EXISTS?:
-            .tool-tool/v2/lsd-1.2.3/fizz buzz.exe
+            .tool-tool/v2/lsd-1.2.3/fizz.exe
             FILE EXISTS?:
-            .tool-tool/v2/lsd-1.2.3/fizz buzz.bat
+            .tool-tool/v2/lsd-1.2.3/fizz.bat
             FILE EXISTS?:
-            .tool-tool/v2/lsd-1.2.3/fizz buzz.cmd
+            .tool-tool/v2/lsd-1.2.3/fizz.cmd
             PRINT:
-            	ERROR running tool-tool (vTEST): Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/lsd-1.2.3/fizz buzz(.exe|.bat|.cmd)
+            	ERROR running tool-tool (vTEST): Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/lsd-1.2.3/fizz(.exe|.bat|.cmd)
 
             EXIT: 1
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn run_tool() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_platform(DownloadPlatform::Windows);
+        adapter.set_args(&["toolyhi"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            CREATE DIR: .tool-tool/v2/tmp
+            CREATE DIR: .tool-tool/v2/
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            DELETE DIR: .tool-tool/v2/lsd-1.2.3
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/foo
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/foo -> bar
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/lsd-1.2.3/fizz
+            CREATE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz
+            WRITE FILE: .tool-tool/v2/lsd-1.2.3/fizz/buzz -> bizz
+            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/tmp/download-lsd-1.2.3-linux
+            READ FILE: .tool-tool/v2/tmp/download-lsd-1.2.3-linux
+            CREATE FILE: .tool-tool/v2/checksums.kdl
+            WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
+            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
+            }
+
+            FILE EXISTS?:
+            .tool-tool/v2/lsd-1.2.3/tooly.exe
+            EXECUTE: .tool-tool/v2/lsd-1.2.3/tooly.exe
+            	ARG: Hello World!
         "#]]);
         Ok(())
     }
@@ -547,8 +594,11 @@ mod tests {
             				linux:   https://example.com/test-1.2.3.tar.gz
             				windows: https://example.com/test-1.2.3.zip
             			commands:
-            				bar:    fizz buzz
-            				foobar: echo foobar
+            				bar:     fizz buzz
+            				foobar:  echo foobar
+            				tooly:   tooly
+            				toolyhi: tooly "Hello World!"
+            				toolyv:  tooly -v
             			env:
             				FIZZ:     buzz
             				FROBNIZZ: nizzle

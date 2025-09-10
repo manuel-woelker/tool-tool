@@ -28,7 +28,7 @@ impl MockAdapter {
         let mut file_map = HashMap::new();
         file_map.insert(
             FilePath::from(CONFIGURATION_FILE_NAME),
-            r#"
+            r##"
                     tools {
                         lsd "1.2.3" {
                             download {
@@ -38,6 +38,9 @@ impl MockAdapter {
                             commands {
                                 foobar "echo foobar"
                                 bar "fizz buzz"
+                                tooly "tooly"
+                                toolyv "tooly -v"
+                                toolyhi #"tooly "Hello World!""#
                             }
                             env {
                                 FROBNIZZ "nizzle"
@@ -45,7 +48,7 @@ impl MockAdapter {
                             }
                        }
                     }
-                       "#
+                       "##
             .as_bytes()
             .to_vec(),
         );
@@ -180,6 +183,9 @@ impl Adapter for MockAdapter {
 
     fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
         self.log_effect(format!("EXECUTE: {}", request.binary_path));
+        for arg in request.args {
+            self.log_effect(format!("\tARG: {}", arg));
+        }
         Ok(())
     }
 }
@@ -191,7 +197,7 @@ impl std::fmt::Debug for MockAdapter {
 }
 
 struct MockFile {
-    path: String,
+    path: FilePath,
     data: Vec<u8>,
     mock_adapter: MockAdapter,
 }
@@ -199,7 +205,7 @@ struct MockFile {
 impl MockFile {
     fn new(path: &FilePath, mock_adapter: MockAdapter) -> Self {
         Self {
-            path: path.to_string(),
+            path: path.clone(),
             data: vec![],
             mock_adapter,
         }
@@ -223,5 +229,9 @@ impl Drop for MockFile {
             self.path,
             String::from_utf8_lossy(&self.data)
         ));
+        self.mock_adapter
+            .write()
+            .file_map
+            .insert(self.path.clone(), self.data.clone());
     }
 }
