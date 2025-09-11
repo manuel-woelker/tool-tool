@@ -1,4 +1,5 @@
 use crate::configuration::platform::DownloadPlatform;
+use crate::types::Env;
 use std::collections::BTreeMap;
 use std::fmt::Display;
 
@@ -22,7 +23,7 @@ pub struct ToolConfiguration {
     pub default_download_artifact: Option<DownloadArtifact>,
     pub download_urls: BTreeMap<DownloadPlatform, DownloadArtifact>,
     pub commands: BTreeMap<String, String>,
-    pub env: BTreeMap<String, String>,
+    pub env: Env,
 }
 
 #[derive(Debug)]

@@ -62,8 +62,11 @@ pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
     };
     let mut args = parsed_command;
     args.extend(command_args);
-    workspace
-        .adapter()
-        .execute(ExecutionRequest { binary_path, args })?;
+    let env = tool_config.env.clone();
+    workspace.adapter().execute(ExecutionRequest {
+        binary_path,
+        args,
+        env,
+    })?;
     Ok(())
 }

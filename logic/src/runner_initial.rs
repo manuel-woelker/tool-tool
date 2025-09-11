@@ -140,7 +140,12 @@ impl ToolToolRunnerInitial {
             output.push_str(&format!("\t{} {}:\n", tool.name, tool.version));
             output_map(&mut output, "download urls", &tool.download_urls);
             output_map(&mut output, "commands", &tool.commands);
-            output_map(&mut output, "env", &tool.env);
+            let env_map = BTreeMap::from_iter(
+                tool.env
+                    .iter()
+                    .map(|env| (env.key.clone(), env.value.clone())),
+            );
+            output_map(&mut output, "env", &env_map);
         }
         self.adapter.print(&output);
 
@@ -697,6 +702,8 @@ mod tests {
             .tool-tool/v2/lsd-1.2.3/tooly.exe
             EXECUTE: .tool-tool/v2/lsd-1.2.3/tooly.exe
             	ARG: Hello World!
+            	ENV: FROBNIZZ=nizzle
+            	ENV: FIZZ=buzz
         "#]]);
         Ok(())
     }
@@ -745,6 +752,8 @@ mod tests {
             	ARG: Hello World!
             	ARG: there
             	ARG: what is this?"
+            	ENV: FROBNIZZ=nizzle
+            	ENV: FIZZ=buzz
         "#]]);
         Ok(())
     }
@@ -807,7 +816,7 @@ mod tests {
             	   1: Failed to parse KDL document
 
             	Location:
-            	    logic\src\configuration\parse_config.rs:23:14
+            	    logic\src\configuration\parse_config.rs:24:14
 
 
             EXIT: 1
@@ -846,7 +855,7 @@ mod tests {
             	   1: Unexpected top-level item: 'foo'
 
             	Location:
-            	    logic\src\configuration\parse_config.rs:49:32
+            	    logic\src\configuration\parse_config.rs:50:32
 
 
             EXIT: 1

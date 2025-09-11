@@ -62,7 +62,7 @@ mod tests {
                             },
                         },
                         commands: {},
-                        env: {},
+                        env: [],
                     },
                 ],
             }

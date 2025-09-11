@@ -185,7 +185,10 @@ impl Adapter for MockAdapter {
     fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
         self.log_effect(format!("EXECUTE: {}", request.binary_path));
         for arg in request.args {
-            self.log_effect(format!("\tARG: {}", arg));
+            self.log_effect(format!("\tARG: {arg}"));
+        }
+        for env in request.env {
+            self.log_effect(format!("\tENV: {}={}", env.key, env.value));
         }
         Ok(())
     }

@@ -8,7 +8,7 @@ use std::process::Command;
 use tool_tool_base::result::{Context, ToolToolResult, bail};
 use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
-use tool_tool_logic::types::FilePath;
+use tool_tool_logic::types::{EnvPair, FilePath};
 
 pub struct RealAdapter {
     base_path: PathBuf,
@@ -96,12 +96,8 @@ impl Adapter for RealAdapter {
         command.args(request.args);
         // Start with a clean environment to prevent user envs impacting the execution
         command.env_clear();
-        for (key, value) in env::vars() {
-            // Some windows executables (e.g. bun) require this to be set
-            #[cfg(target_os = "windows")]
-            if key.as_str() == "SYSTEMROOT" {
-                command.env(key, value);
-            }
+        for EnvPair { key, value } in request.env {
+            command.env(key, value);
         }
         let status = command.status()?;
         if !status.success() {

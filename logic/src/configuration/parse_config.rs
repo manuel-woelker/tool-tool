@@ -1,5 +1,6 @@
 use crate::configuration::platform::DownloadPlatform;
 use crate::configuration::{DownloadArtifact, ToolConfiguration, ToolToolConfiguration};
+use crate::types::EnvPair;
 use kdl::{KdlDocument, KdlNode};
 use miette::{LabeledSpan, Severity, miette};
 use std::collections::BTreeMap;
@@ -67,7 +68,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
         .expect("Expected tool version to be a string");
     let mut download_urls = BTreeMap::new();
     let mut commands = BTreeMap::new();
-    let mut env = BTreeMap::new();
+    let mut env = vec![];
     let mut default_download_artifact = None;
     for tool_child in children(tool_node) {
         match tool_child.name().value() {
@@ -113,21 +114,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
                         .as_string()
                         .expect("Expected command to be a string")
                         .to_string();
-                    env.insert(env_name, env_value);
-                }
-            }
-            "sha512" => {
-                for env_child in children(tool_child) {
-                    let env_name = env_child.name().value().to_string();
-                    // TODO: factor out getting parameters
-                    let env_value = env_child
-                        .entry(0)
-                        .expect("Expected command binary")
-                        .value()
-                        .as_string()
-                        .expect("Expected command to be a string")
-                        .to_string();
-                    env.insert(env_name, env_value);
+                    env.push(EnvPair::new(env_name, env_value));
                 }
             }
             other => bail!("Unknown tool child: '{other}'"),
@@ -204,7 +191,7 @@ mod tests {
                         default_download_artifact: None,
                         download_urls: {},
                         commands: {},
-                        env: {},
+                        env: [],
                     },
                 ],
             }
@@ -237,7 +224,7 @@ mod tests {
                             },
                         },
                         commands: {},
-                        env: {},
+                        env: [],
                     },
                 ],
             }
@@ -274,9 +261,12 @@ mod tests {
                         commands: {
                             "foo": "echo foo",
                         },
-                        env: {
-                            "FOO": "bar",
-                        },
+                        env: [
+                            EnvPair {
+                                key: "FOO",
+                                value: "bar",
+                            },
+                        ],
                     },
                 ],
             }

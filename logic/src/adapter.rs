@@ -1,5 +1,5 @@
 use crate::configuration::platform::DownloadPlatform;
-use crate::types::FilePath;
+use crate::types::{Env, FilePath};
 use std::fmt::Debug;
 use std::io::{Read, Seek, Write};
 use std::rc::Rc;
@@ -79,4 +79,5 @@ pub type AdapterBox = Rc<dyn Adapter>;
 pub struct ExecutionRequest {
     pub binary_path: FilePath,
     pub args: Vec<String>,
+    pub env: Env,
 }
