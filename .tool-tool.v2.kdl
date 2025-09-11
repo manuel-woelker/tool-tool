@@ -11,6 +11,22 @@ tools {
 		env {
 		}
 	}
+	bun "1.2.21" {
+		download {
+			windows "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-windows-x64-baseline.zip"
+		}
+		commands {
+			bun "bun"
+		}
+	}
+	node "22.19.0" {
+		download {
+			windows "https://nodejs.org/dist/v${version}/node-v${version}-win-x64.zip"
+		}
+		commands {
+			node "node"
+		}
+	}
 	lua "5.4.6" {
 		download {
 			// TODO: set strip_directories = 0

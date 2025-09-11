@@ -66,7 +66,8 @@ impl Adapter for RealAdapter {
     }
 
     fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
-        std::fs::remove_dir_all(self.resolve_path(path)?)?;
+        std::fs::remove_dir_all(self.resolve_path(path)?)
+            .with_context(|| format!("Failed to delete directory {path:?}"))?;
         Ok(())
     }
 
@@ -92,8 +93,16 @@ impl Adapter for RealAdapter {
     fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
         let path = self.resolve_path(&request.binary_path)?;
         let mut command = Command::new(path);
-        command.env_clear();
         command.args(request.args);
+        // Start with a clean environment to prevent user envs impacting the execution
+        command.env_clear();
+        for (key, value) in env::vars() {
+            // Some windows executables (e.g. bun) require this to be set
+            #[cfg(target_os = "windows")]
+            if key.as_str() == "SYSTEMROOT" {
+                command.env(key, value);
+            }
+        }
         let status = command.status()?;
         if !status.success() {
             bail!("Command failed with exit code {}", status.code().unwrap());

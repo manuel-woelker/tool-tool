@@ -35,6 +35,10 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
                     "download-{}-{}-{}",
                     tool.name, tool.version, platform
                 ));
+                info!(
+                    "Downloading {} to {} for checksum generation",
+                    artifact.url, download_path
+                );
                 adapter.download_file(&artifact.url, &download_path)?;
                 let mut download_file = adapter.read_file(&download_path)?;
                 let sha512 = compute_sha512(download_file.as_mut())?;
@@ -86,14 +90,19 @@ fn download_tool(
     }
     // TODO: make random temp dir
     let temp_dir = tool_tool_dir.join("tmp");
-
-    adapter.delete_directory_all(&tool_path)?;
-    adapter.create_directory_all(&tool_path)?;
+    if adapter.file_exists(&temp_dir)? {
+        adapter.delete_directory_all(&temp_dir)?;
+    }
     adapter.create_directory_all(&temp_dir)?;
+    if adapter.file_exists(&tool_path)? {
+        adapter.delete_directory_all(&tool_path)?;
+    }
+    adapter.create_directory_all(&tool_path)?;
     let download_path = temp_dir.join(format!(
         "download-{}-{}-{}",
         tool.name, tool.version, host_platform
     ));
+    info!("Downloading {} to {}", download_artifact.url, download_path);
     adapter.download_file(&download_artifact.url, &download_path)?;
     let mut download_file = adapter.read_file(&download_path)?;
     // Compute and verify checksum

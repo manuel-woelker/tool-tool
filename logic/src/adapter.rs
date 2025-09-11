@@ -75,6 +75,7 @@ pub trait Adapter: Debug + 'static {
 
 pub type AdapterBox = Rc<dyn Adapter>;
 
+#[derive(Debug)]
 pub struct ExecutionRequest {
     pub binary_path: FilePath,
     pub args: Vec<String>,
