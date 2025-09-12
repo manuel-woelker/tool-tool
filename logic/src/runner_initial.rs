@@ -12,8 +12,6 @@ use crate::workspace::Workspace;
 use kdl::KdlError;
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
-use std::env;
-use std::fmt::Write;
 use std::rc::Rc;
 use tool_tool_base::logging::info;
 use tool_tool_base::result::ToolToolResult;
@@ -70,10 +68,6 @@ impl ToolToolRunnerInitial {
                         .render_report(&mut message, err.report().as_ref())?;
                 }
             }
-        }
-        // Check if RUST_BACKTRACE env is set
-        if env::var_os("RUST_BACKTRACE").is_some() {
-            writeln!(message, "\n{err:?}\n")?;
         }
 
         self.adapter.print(&message);
@@ -460,14 +454,6 @@ mod tests {
             	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
             	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
 
-            	Checksum mismatch for tool 'lsd'
-            	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
-            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-
-            	Location:
-            	    logic\src\download_task.rs:112:24
-
-
             EXIT: 1
         "#]]);
         Ok(())
@@ -502,14 +488,6 @@ mod tests {
             	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
             	Expected: wrong_checksum
             	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-
-            	Checksum mismatch for tool 'lsd'
-            	Expected: wrong_checksum
-            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-
-            	Location:
-            	    logic\src\download_task.rs:112:24
-
 
             EXIT: 1
         "#]]);
@@ -546,14 +524,6 @@ mod tests {
             	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
             	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
             	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-
-            	Checksum mismatch for tool 'lsd'
-            	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
-            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-
-            	Location:
-            	    logic\src\download_task.rs:112:24
-
 
             EXIT: 1
         "#]]);
@@ -648,12 +618,6 @@ mod tests {
             .tool-tool/v2/lsd-1.2.3/fizz.cmd
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/lsd-1.2.3/fizz(.exe|.bat|.cmd)
-
-            	Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/lsd-1.2.3/fizz(.exe|.bat|.cmd)
-
-            	Location:
-            	    logic\src\execute_tool.rs:48:13
-
 
             EXIT: 1
         "#]]);
@@ -809,16 +773,6 @@ mod tests {
             	   ·       ╰── not closed
             	   ╰────
 
-            	Failed to parse KDL file '.tool-tool.v2.kdl'
-
-            	Caused by:
-            	   0: Could not parse '.tool-tool.v2.kdl'
-            	   1: Failed to parse KDL document
-
-            	Location:
-            	    logic\src\configuration\parse_config.rs:24:14
-
-
             EXIT: 1
         "#]]);
         Ok(())
@@ -847,16 +801,6 @@ mod tests {
             	   ·  ╰── unexpected
             	   ╰────
             	  help: Valid top level items are: 'tools'
-
-            	Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
-
-            	Caused by:
-            	   0: Failed to parse KDL file '.tool-tool.v2.kdl'
-            	   1: Unexpected top-level item: 'foo'
-
-            	Location:
-            	    logic\src\configuration\parse_config.rs:50:32
-
 
             EXIT: 1
         "#]]);
