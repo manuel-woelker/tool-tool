@@ -120,6 +120,10 @@ impl MockAdapter {
     pub fn get_effects(&self) -> String {
         self.read().effects_string.clone()
     }
+
+    pub fn clear_effects(&self) {
+        self.write().effects_string.clear();
+    }
 }
 
 impl Adapter for MockAdapter {
@@ -136,7 +140,7 @@ impl Adapter for MockAdapter {
     }
 
     fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool> {
-        self.log_effect(format!("FILE EXISTS?:\n{}", path));
+        self.log_effect(format!("FILE EXISTS?: {}", path));
         Ok(self.read().file_map.contains_key(path))
     }
 
@@ -163,6 +167,7 @@ impl Adapter for MockAdapter {
 
     fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
         self.log_effect(format!("DELETE DIR: {path}"));
+        self.write().file_map.retain(|k, _v| !k.starts_with(path));
         Ok(())
     }
 
