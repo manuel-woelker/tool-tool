@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
-use tool_tool_base::result::{Context, ToolToolResult, bail};
+use tool_tool_base::result::{Context, ToolToolResult};
 use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::{EnvPair, FilePath};
@@ -90,7 +90,7 @@ impl Adapter for RealAdapter {
         return DownloadPlatform::Windows;
     }
 
-    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
+    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<i32> {
         let path = self.resolve_path(&request.binary_path)?;
         let mut command = Command::new(path);
         command.args(request.args);
@@ -100,10 +100,7 @@ impl Adapter for RealAdapter {
             command.env(key, value);
         }
         let status = command.status()?;
-        if !status.success() {
-            bail!("Command failed with exit code {}", status.code().unwrap());
-        }
-        Ok(())
+        Ok(status.code().unwrap_or(255))
     }
 }
 

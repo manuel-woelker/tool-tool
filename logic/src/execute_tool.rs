@@ -63,10 +63,25 @@ pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut args = parsed_command;
     args.extend(command_args);
     let env = tool_config.env.clone();
-    workspace.adapter().execute(ExecutionRequest {
-        binary_path,
-        args,
-        env,
+    let exit_code = workspace.adapter().execute(ExecutionRequest {
+        binary_path: binary_path.clone(),
+        args: args.clone(),
+        env: env.clone(),
     })?;
+    if exit_code != 0 {
+        workspace.adapter().print(&format!(
+            "❗ Command '{command_name}' failed with exit code {exit_code}"
+        ));
+        workspace.adapter().print(&format!(
+            "\tExecuted command was: {binary_path} {}",
+            args.join(" ")
+        ));
+        workspace.adapter().print("\tEnvironment:");
+        for env in env {
+            workspace
+                .adapter()
+                .print(&format!("\t\t{}={}", env.key, env.value));
+        }
+    }
     Ok(())
 }

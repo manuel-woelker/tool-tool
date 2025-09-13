@@ -70,7 +70,7 @@ pub trait Adapter: Debug + 'static {
     /**
     Execute the given binary with the given arguments
     */
-    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()>;
+    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<i32>;
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;

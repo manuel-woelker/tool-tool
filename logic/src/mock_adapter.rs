@@ -21,6 +21,7 @@ struct MockAdapterInner {
     platform: DownloadPlatform,
     url_map: HashMap<String, Vec<u8>>,
     file_map: HashMap<FilePath, Vec<u8>>,
+    exit_code: i32,
 }
 
 impl MockAdapter {
@@ -60,6 +61,7 @@ impl MockAdapter {
                 url_map: HashMap::new(),
                 file_map,
                 effects_string: String::new(),
+                exit_code: 0,
             })),
         }
     }
@@ -108,6 +110,10 @@ impl MockAdapter {
     pub fn verify_effects(&self, expected: Expect) {
         expected.assert_eq(&self.read().effects_string);
         self.write().effects_string.clear();
+    }
+
+    pub fn set_exit_code(&self, exit_code: i32) {
+        self.write().exit_code = exit_code;
     }
 
     #[allow(dead_code)]
@@ -182,7 +188,7 @@ impl Adapter for MockAdapter {
         self.read().platform
     }
 
-    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<()> {
+    fn execute(&self, request: ExecutionRequest) -> ToolToolResult<i32> {
         self.log_effect(format!("EXECUTE: {}", request.binary_path));
         for arg in request.args {
             self.log_effect(format!("\tARG: {arg}"));
@@ -190,7 +196,7 @@ impl Adapter for MockAdapter {
         for env in request.env {
             self.log_effect(format!("\tENV: {}={}", env.key, env.value));
         }
-        Ok(())
+        Ok(self.read().exit_code)
     }
 }
 
