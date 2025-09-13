@@ -27,7 +27,7 @@ impl Downloader {
             std::io::copy(&mut reader, &mut output_file)?;
             Ok(())
         })()
-        .wrap_err_with(|| format!("Failed to download '{url}' to '{destination_path:?}'"))
+        .with_context(|| format!("Failed to download '{url}' to '{destination_path:?}'"))
     }
 }
 

@@ -21,7 +21,7 @@ pub fn parse_configuration_from_kdl(
         let mut tools = vec![];
         let result = kdl
             .parse::<KdlDocument>()
-            .wrap_err_with(|| format!("Could not parse '{filename}'"))?;
+            .with_context(|| format!("Could not parse '{filename}'"))?;
         let doc: KdlDocument = result;
         for document_node in doc.nodes() {
             match document_node.name().value() {

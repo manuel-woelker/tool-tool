@@ -1,7 +1,7 @@
-pub type ToolToolError = eyre::Error;
+pub type ToolToolError = anyhow::Error;
 
-pub use eyre::eyre as err;
-pub use eyre::{Context, OptionExt, WrapErr, bail, eyre};
+pub use anyhow::anyhow as err;
+pub use anyhow::{Context, bail};
 use std::fmt::{Debug, Display, Formatter};
 
 pub type ToolToolResult<T> = Result<T, ToolToolError>;

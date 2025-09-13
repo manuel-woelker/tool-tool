@@ -51,29 +51,6 @@ impl ToolToolRunnerInitial {
         }
     }
 
-    fn print_error(&self, err: ToolToolError) -> ToolToolResult<()> {
-        let mut message = format!("ERROR running tool-tool ({}): {err}\n", get_version());
-
-        if err.source().is_some() {
-            message.push_str("  Chain of causes:\n");
-            err.chain().skip(1).enumerate().for_each(|(index, err)| {
-                message.push_str(&format!("   {index}: {err}\n"));
-            });
-            message.push('\n');
-            for err in err.chain() {
-                if let Some(err) = err.downcast_ref::<KdlError>() {
-                    self.report_handler.render_report(&mut message, err)?;
-                } else if let Some(err) = err.downcast_ref::<MietteReportError>() {
-                    self.report_handler
-                        .render_report(&mut message, err.report().as_ref())?;
-                }
-            }
-        }
-
-        self.adapter.print(&message);
-        Ok(())
-    }
-
     pub fn run_inner(&self) -> ToolToolResult<()> {
         let args = self.adapter.args();
         let first_arg = args.get(1);
@@ -102,10 +79,43 @@ impl ToolToolRunnerInitial {
                     self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
                     self.adapter.exit(1);
                 } else {
-                    self.execute_tool()?;
+                    self.execute_tool()
+                        .with_context(|| format!("Failed to execute command '{other}'"))?;
                 }
             }
         }
+        Ok(())
+    }
+
+    fn print_error(&self, err: ToolToolError) -> ToolToolResult<()> {
+        let mut message = format!("ERROR running tool-tool ({}): {err}\n", get_version());
+
+        if err.source().is_some() {
+            message.push_str("  Chain of causes:\n");
+            err.chain().skip(1).enumerate().for_each(|(index, err)| {
+                message.push_str(&format!("   {index}: {err}\n"));
+            });
+            message.push('\n');
+            for err in err.chain() {
+                if let Some(err) = err.downcast_ref::<KdlError>() {
+                    self.report_handler.render_report(&mut message, err)?;
+                } else if let Some(err) = err.downcast_ref::<MietteReportError>() {
+                    self.report_handler
+                        .render_report(&mut message, err.report().as_ref())?;
+                }
+            }
+        }
+        // omit backtrace in tests to prevent noise in test output
+        #[cfg(not(test))]
+        {
+            let backtrace = err.backtrace();
+            if let std::backtrace::BacktraceStatus::Captured = backtrace.status() {
+                message.push_str("\n  Backtrace:\n");
+                message.push_str(&backtrace.to_string());
+            }
+        }
+
+        self.adapter.print(&message);
         Ok(())
     }
 
@@ -617,7 +627,10 @@ mod tests {
             FILE EXISTS?:
             .tool-tool/v2/lsd-1.2.3/fizz.cmd
             PRINT:
-            	ERROR running tool-tool (vTEST): Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/lsd-1.2.3/fizz(.exe|.bat|.cmd)
+            	ERROR running tool-tool (vTEST): Failed to execute command 'bar'
+            	  Chain of causes:
+            	   0: Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/lsd-1.2.3/fizz(.exe|.bat|.cmd)
+
 
             EXIT: 1
         "#]]);

@@ -19,7 +19,7 @@ pub fn load_checksums(workspace: &mut Workspace) -> ToolToolResult<()> {
         let checksum_kdl = std::io::read_to_string(checksum_file)?;
         let result = checksum_kdl
             .parse::<KdlDocument>()
-            .wrap_err_with(|| format!("Could not parse '{checksums_filename}'"))?;
+            .with_context(|| format!("Could not parse '{checksums_filename}'"))?;
         for node in result.nodes() {
             match node.name().value() {
                 "sha512sums" => {
