@@ -71,6 +71,11 @@ pub trait Adapter: Debug + 'static {
     Execute the given binary with the given arguments
     */
     fn execute(&self, request: ExecutionRequest) -> ToolToolResult<i32>;
+
+    /**
+    Create a random, unique string
+    */
+    fn random_string(&self) -> ToolToolResult<String>;
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;

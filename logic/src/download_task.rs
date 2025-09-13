@@ -18,19 +18,17 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
     let sha512sums = &workspace.checksums.sha512sums;
     let mut new_sha512sums = sha512sums.clone();
     // create .tool-tool directory if it doesn't exist
-    let tool_tool_dir = workspace.tool_tool_dir();
     let config = workspace.config();
     // Download artifacts for current host
     for tool in config.tools.iter() {
         download_tool(workspace, tool, &mut new_sha512sums)?;
     }
 
-    // TODO: make random temp dir
-    let temp_dir = tool_tool_dir.join("tmp");
     // Download missing artifacts to complete checksums
     for tool in config.tools.iter() {
         for (platform, artifact) in tool.download_urls.iter() {
             if !new_sha512sums.contains_key(&artifact.url) {
+                let temp_dir = workspace.create_temp_dir(&tool.name)?;
                 let download_path = temp_dir.join(format!(
                     "download-{}-{}-{}",
                     tool.name, tool.version, platform
@@ -43,6 +41,7 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
                 let mut download_file = adapter.read_file(&download_path)?;
                 let sha512 = compute_sha512(download_file.as_mut())?;
                 new_sha512sums.insert(artifact.url.clone(), sha512);
+                adapter.delete_directory_all(&temp_dir)?;
             }
         }
     }
@@ -89,7 +88,7 @@ fn download_tool(
         }
     }
     // TODO: make random temp dir
-    let temp_dir = tool_tool_dir.join("tmp");
+    let temp_dir = workspace.create_temp_dir(&tool.name)?;
     if adapter.file_exists(&temp_dir)? {
         adapter.delete_directory_all(&temp_dir)?;
     }
@@ -129,6 +128,7 @@ fn download_tool(
     let file_type = get_file_type_from_url(&download_artifact.url);
     extract_tool(workspace, &tool_path, &download_path, file_type)?;
 
+    adapter.delete_directory_all(&temp_dir)?;
     // Last step is to create the checksum file
     let mut checksum_file = adapter.create_file(&checksum_path)?;
     checksum_file.write_all(sha512.as_bytes())?;

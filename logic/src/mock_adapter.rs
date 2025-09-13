@@ -22,6 +22,7 @@ struct MockAdapterInner {
     url_map: HashMap<String, Vec<u8>>,
     file_map: HashMap<FilePath, Vec<u8>>,
     exit_code: i32,
+    next_random_number: u64,
 }
 
 impl MockAdapter {
@@ -62,6 +63,7 @@ impl MockAdapter {
                 file_map,
                 effects_string: String::new(),
                 exit_code: 0,
+                next_random_number: 0,
             })),
         }
     }
@@ -202,6 +204,14 @@ impl Adapter for MockAdapter {
             self.log_effect(format!("\tENV: {}={}", env.key, env.value));
         }
         Ok(self.read().exit_code)
+    }
+
+    fn random_string(&self) -> ToolToolResult<String> {
+        self.log_effect("RANDOM STRING");
+        let mut guard = self.write();
+        let random_number = guard.next_random_number;
+        guard.next_random_number += 1;
+        Ok(format!("rand-{random_number}"))
     }
 }
 

@@ -1,4 +1,6 @@
 use crate::download;
+use rand::Rng;
+use rand::distr::Alphanumeric;
 use std::env;
 use std::fmt::Debug;
 use std::fs::File;
@@ -101,6 +103,15 @@ impl Adapter for RealAdapter {
         }
         let status = command.status()?;
         Ok(status.code().unwrap_or(255))
+    }
+
+    fn random_string(&self) -> ToolToolResult<String> {
+        let random_string: String = rand::rng()
+            .sample_iter(Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
+        Ok(random_string)
     }
 }
 
