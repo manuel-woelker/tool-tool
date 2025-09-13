@@ -4,7 +4,7 @@ use crate::workspace::Workspace;
 use shellish_parse::ParseOptions;
 use tool_tool_base::result::{Context, HelpError, ToolToolError, ToolToolResult, bail};
 
-pub fn execute_tool(workspace: &mut Workspace) -> ToolToolResult<()> {
+pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut command_args = workspace.adapter().args();
     // remove the tool-tool binary name
     command_args.remove(0);

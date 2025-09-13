@@ -4,8 +4,8 @@ use crate::configuration::expand_config::expand_configuration_template_expressio
 use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::download_task::run_download_task;
-use crate::execute_tool::execute_tool;
 use crate::help::{generate_available_commands_message, print_help};
+use crate::run_command::run_command;
 use crate::types::FilePath;
 use crate::version::get_version;
 use crate::workspace::Workspace;
@@ -83,7 +83,7 @@ impl ToolToolRunnerInitial {
                     self.adapter.print(&format!("ERROR: Unknown argument: '{other}'\n\nTry --help for more information about supported arguments"));
                     self.adapter.exit(1);
                 } else {
-                    self.execute_tool()
+                    self.run_command()
                         .with_context(|| format!("Failed to execute command '{other}'"))?;
                 }
             }
@@ -126,10 +126,10 @@ impl ToolToolRunnerInitial {
         Ok(())
     }
 
-    fn execute_tool(&self) -> ToolToolResult<()> {
+    fn run_command(&self) -> ToolToolResult<()> {
         let mut workspace = self.create_workspace()?;
         run_download_task(&mut workspace)?;
-        execute_tool(&mut workspace)
+        run_command(&mut workspace)
     }
 
     fn print_help(&self) {
@@ -637,7 +637,7 @@ mod tests {
     }
 
     #[test]
-    fn run_tool_binary_not_found() -> ToolToolResult<()> {
+    fn run_command_binary_not_found() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["bar"]);
@@ -692,7 +692,7 @@ mod tests {
     }
 
     #[test]
-    fn run_tool() -> ToolToolResult<()> {
+    fn run_command() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["toolyhi"]);
@@ -740,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn run_tool_with_args() -> ToolToolResult<()> {
+    fn run_command_with_args() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["toolyhi", "there", "what is this?\""]);
@@ -790,7 +790,7 @@ mod tests {
     }
 
     #[test]
-    fn run_tool_with_non_zero_exit_code() -> ToolToolResult<()> {
+    fn run_command_with_non_zero_exit_code() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_platform(DownloadPlatform::Windows);
         adapter.set_args(&["tooly"]);
