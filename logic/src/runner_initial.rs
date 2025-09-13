@@ -161,7 +161,11 @@ impl ToolToolRunnerInitial {
         for tool in &config.tools {
             output.push_str(&format!("\t{} {}:\n", tool.name, tool.version));
             output_map(&mut output, "download urls", &tool.download_urls);
-            output_map(&mut output, "commands", &tool.commands);
+            for command in &tool.commands {
+                output.push_str(&format!("\t\t{}:\n", command.name));
+                output.push_str(&format!("\t\t\t{}:\n", command.command_string));
+                output.push_str(&format!("\t\t\t{}:\n", command.description));
+            }
             let env_map = BTreeMap::from_iter(
                 tool.env
                     .iter()
@@ -325,11 +329,11 @@ mod tests {
             PRINT:
 
             	The following commands are available: 
-            		bar
-            		foobar
-            		tooly
-            		toolyhi
-            		toolyv
+            		bar     - fizz buzz
+            		foobar  - echo foobar
+            		tooly   - tooly
+            		toolyhi - Print a hello world
+            		toolyv  - tooly -v
 
         "#]]);
         Ok(())
@@ -626,11 +630,11 @@ mod tests {
             PRINT:
 
             	The following commands are available: 
-            		bar
-            		foobar
-            		tooly
-            		toolyhi
-            		toolyv
+            		bar     - fizz buzz
+            		foobar  - echo foobar
+            		tooly   - tooly
+            		toolyhi - Print a hello world
+            		toolyv  - tooly -v
 
         "#]]);
         Ok(())
@@ -860,12 +864,21 @@ mod tests {
             			download urls:
             				linux:   https://example.com/test-1.2.3.tar.gz
             				windows: https://example.com/test-1.2.3.zip
-            			commands:
-            				bar:     fizz buzz
-            				foobar:  echo foobar
-            				tooly:   tooly
-            				toolyhi: tooly "Hello World!"
-            				toolyv:  tooly -v
+            			foobar:
+            				echo foobar:
+            				:
+            			bar:
+            				fizz buzz:
+            				:
+            			tooly:
+            				tooly:
+            				:
+            			toolyv:
+            				tooly -v:
+            				:
+            			toolyhi:
+            				tooly "Hello World!":
+            				Print a hello world:
             			env:
             				FIZZ:     buzz
             				FROBNIZZ: nizzle

@@ -17,12 +17,29 @@ pub struct DownloadArtifact {
 }
 
 #[derive(Debug)]
+pub struct Command {
+    pub name: String,
+    pub command_string: String,
+    pub description: String,
+}
+
+impl Command {
+    pub fn new(name: String, command_string: String, description: String) -> Command {
+        Command {
+            name,
+            command_string,
+            description,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct ToolConfiguration {
     pub name: String,
     pub version: String,
     pub default_download_artifact: Option<DownloadArtifact>,
     pub download_urls: BTreeMap<DownloadPlatform, DownloadArtifact>,
-    pub commands: BTreeMap<String, String>,
+    pub commands: Vec<Command>,
     pub env: Env,
 }
 

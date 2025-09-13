@@ -1,5 +1,5 @@
 use crate::configuration::platform::DownloadPlatform;
-use crate::configuration::{DownloadArtifact, ToolConfiguration, ToolToolConfiguration};
+use crate::configuration::{Command, DownloadArtifact, ToolConfiguration, ToolToolConfiguration};
 use crate::types::EnvPair;
 use kdl::{KdlDocument, KdlNode};
 use miette::{LabeledSpan, Severity, miette};
@@ -67,7 +67,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
         .as_string()
         .expect("Expected tool version to be a string");
     let mut download_urls = BTreeMap::new();
-    let mut commands = BTreeMap::new();
+    let mut commands = vec![];
     let mut env = vec![];
     let mut default_download_artifact = None;
     for tool_child in children(tool_node) {
@@ -93,6 +93,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
             "commands" => {
                 for command_child in children(tool_child) {
                     let command_name = command_child.name().value().to_string();
+                    // TODO: collect all keys as arguments?
                     let command_binary = command_child
                         .entry(0)
                         .expect("Expected command binary")
@@ -100,7 +101,13 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
                         .as_string()
                         .expect("Expected command to be a string")
                         .to_string();
-                    commands.insert(command_name, command_binary);
+                    let description = command_child
+                        .entry("description")
+                        .and_then(|entry| entry.value().as_string())
+                        .unwrap_or("")
+                        .to_string()
+                        .to_string();
+                    commands.push(Command::new(command_name, command_binary, description));
                 }
             }
             "env" => {
@@ -190,7 +197,7 @@ mod tests {
                         version: "0.17.0",
                         default_download_artifact: None,
                         download_urls: {},
-                        commands: {},
+                        commands: [],
                         env: [],
                     },
                 ],
@@ -223,7 +230,7 @@ mod tests {
                                 url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
                             },
                         },
-                        commands: {},
+                        commands: [],
                         env: [],
                     },
                 ],
@@ -240,6 +247,7 @@ mod tests {
                 }
                 commands {
                     foo "echo foo"
+                    bar "echo foo" description="Go to the bar"
                 }
                 env {
                     FOO "bar"
@@ -258,9 +266,18 @@ mod tests {
                             },
                         ),
                         download_urls: {},
-                        commands: {
-                            "foo": "echo foo",
-                        },
+                        commands: [
+                            Command {
+                                name: "foo",
+                                command_string: "echo foo",
+                                description: "",
+                            },
+                            Command {
+                                name: "bar",
+                                command_string: "echo foo",
+                                description: "Go to the bar",
+                            },
+                        ],
                         env: [
                             EnvPair {
                                 key: "FOO",

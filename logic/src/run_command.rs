@@ -10,11 +10,16 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     command_args.remove(0);
     let command_name = command_args.remove(0);
     let config = workspace.config();
-    let Some(tool_config) = config
-        .tools
-        .iter()
-        .find(|tool| tool.commands.contains_key(&command_name))
-    else {
+    let Some((tool_config, command_config)) = ('command: {
+        for tool in &config.tools {
+            for command in &tool.commands {
+                if command.name == command_name {
+                    break 'command Some((tool, command));
+                }
+            }
+        }
+        None
+    }) else {
         let description = format!("No tool found for command '{command_name}'");
         return Err(
             if let Some(message) = generate_available_commands_message(config) {
@@ -24,12 +29,12 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
             },
         );
     };
-    let command_config = tool_config.commands.get(&command_name).unwrap();
     let extensions = workspace
         .adapter()
         .get_platform()
         .get_executable_extensions();
-    let mut parsed_command = shellish_parse::parse(command_config, ParseOptions::new())?;
+    let mut parsed_command =
+        shellish_parse::parse(&command_config.command_string, ParseOptions::new())?;
     let binary = parsed_command.remove(0);
     let tool_path = workspace
         .tool_tool_dir()

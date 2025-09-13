@@ -56,8 +56,17 @@ pub(crate) fn generate_available_commands_message(
         return None;
     }
     let mut message = String::from("\nThe following commands are available: \n");
+    let mut width = 0;
+    for command in &commands {
+        width = width.max(command.name.len());
+    }
+    commands.sort_by_key(|command| &command.name);
     for command in commands {
-        message.push_str(&format!("\t{}\n", command.0));
+        let mut description = &command.description;
+        if description.is_empty() {
+            description = &command.command_string;
+        }
+        message.push_str(&format!("\t{:width$} - {description}\n", command.name));
     }
     Some(message)
 }

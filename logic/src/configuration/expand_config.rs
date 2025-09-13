@@ -61,7 +61,7 @@ mod tests {
                                 url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
                             },
                         },
-                        commands: {},
+                        commands: [],
                         env: [],
                     },
                 ],
