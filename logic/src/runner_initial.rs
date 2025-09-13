@@ -5,17 +5,18 @@ use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::download_task::run_download_task;
 use crate::execute_tool::execute_tool;
-use crate::help::print_help;
+use crate::help::{generate_available_commands_message, print_help};
 use crate::types::FilePath;
 use crate::version::get_version;
 use crate::workspace::Workspace;
 use kdl::KdlError;
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use std::rc::Rc;
 use tool_tool_base::logging::info;
-use tool_tool_base::result::ToolToolResult;
 use tool_tool_base::result::{Context, MietteReportError, ToolToolError};
+use tool_tool_base::result::{HelpError, ToolToolResult};
 
 pub struct ToolToolRunnerInitial {
     adapter: AdapterBox,
@@ -59,6 +60,9 @@ impl ToolToolRunnerInitial {
             return Ok(());
         };
         match first_arg.as_str() {
+            "--commands" => {
+                self.print_available_commands();
+            }
             "--help" => {
                 self.print_help();
             }
@@ -89,7 +93,7 @@ impl ToolToolRunnerInitial {
 
     fn print_error(&self, err: ToolToolError) -> ToolToolResult<()> {
         let mut message = format!("ERROR running tool-tool ({}): {err}\n", get_version());
-
+        let mut help_text = String::new();
         if err.source().is_some() {
             message.push_str("  Chain of causes:\n");
             err.chain().skip(1).enumerate().for_each(|(index, err)| {
@@ -102,6 +106,8 @@ impl ToolToolRunnerInitial {
                 } else if let Some(err) = err.downcast_ref::<MietteReportError>() {
                     self.report_handler
                         .render_report(&mut message, err.report().as_ref())?;
+                } else if let Some(err) = err.downcast_ref::<HelpError>() {
+                    writeln!(help_text, "Help: {}", err.help_message)?;
                 }
             }
         }
@@ -114,7 +120,8 @@ impl ToolToolRunnerInitial {
                 message.push_str(&backtrace.to_string());
             }
         }
-
+        // put help text last
+        message.push_str(&help_text);
         self.adapter.print(&message);
         Ok(())
     }
@@ -127,6 +134,17 @@ impl ToolToolRunnerInitial {
 
     fn print_help(&self) {
         print_help(self.adapter.as_ref());
+        self.print_available_commands();
+    }
+
+    fn print_available_commands(&self) {
+        let Ok(config) = self.load_config() else {
+            return;
+        };
+        let Some(message) = generate_available_commands_message(&config) else {
+            return;
+        };
+        self.adapter.print(&message);
     }
 
     fn validate_config(&self) -> ToolToolResult<()> {
@@ -272,14 +290,20 @@ mod tests {
 
             	USAGE:
             	    tool-tool [OPTIONS]
+            	    tool-tool [COMMAND]
 
             	OPTIONS:
-            	    --help              Show this help message and exit
-            	    --version           Display version information and exit
+            	    --help              Show this help message
+            	    --commands          Show available commands
+            	    --version           Display version information
             	    --validate          Validate the tool configuration file
             	    --expand-config     Expand and display the configuration with all templates resolved
 
             	EXAMPLES:
+            	    # Execute the 'foo' command defined in .tool-tool.v2.kdl
+            	    # For available commands see below
+            	    tool-tool foo
+
             	    # Show help
             	    tool-tool --help
 
@@ -297,6 +321,16 @@ mod tests {
             	    directory. This file should contain the tool configuration in KDL format.
 
             	For more information, please refer to the documentation.
+            READ FILE: .tool-tool.v2.kdl
+            PRINT:
+
+            	The following commands are available: 
+            		bar
+            		foobar
+            		tooly
+            		toolyhi
+            		toolyv
+
         "#]]);
         Ok(())
     }
@@ -577,6 +611,26 @@ mod tests {
             "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
             "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
+
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn commands() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_args(&["--commands"]);
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool.v2.kdl
+            PRINT:
+
+            	The following commands are available: 
+            		bar
+            		foobar
+            		tooly
+            		toolyhi
+            		toolyv
 
         "#]]);
         Ok(())

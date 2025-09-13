@@ -35,3 +35,26 @@ impl Display for MietteReportError {
 }
 
 impl std::error::Error for MietteReportError {}
+
+#[derive(Debug)]
+pub struct HelpError {
+    pub description: String,
+    pub help_message: String,
+}
+
+impl HelpError {
+    pub fn new(description: String, help_message: String) -> Self {
+        Self {
+            description,
+            help_message,
+        }
+    }
+}
+
+impl Display for HelpError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.description, f)
+    }
+}
+
+impl std::error::Error for HelpError {}
