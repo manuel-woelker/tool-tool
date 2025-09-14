@@ -120,3 +120,114 @@ impl Debug for RealAdapter {
         write!(f, "RealAdapter")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use httpmock::Method::GET;
+    use httpmock::MockServer;
+    use test_temp_dir::{TestTempDir, test_temp_dir};
+
+    struct TestContext {
+        temp_dir: TestTempDir,
+        adapter: RealAdapter,
+    }
+
+    fn setup() -> TestContext {
+        let temp_dir = test_temp_dir!();
+        let server = MockServer::start();
+        let content = "download content";
+        server.mock(|when, then| {
+            when.method(GET).path("/download_url");
+            then.status(200)
+                .header("content-type", "application/octet-stream")
+                .body(content);
+        });
+        let adapter = RealAdapter::new(temp_dir.as_path_untracked().to_path_buf());
+        TestContext { temp_dir, adapter }
+    }
+
+    fn create_adapter_in_current_directory() -> RealAdapter {
+        RealAdapter::new(PathBuf::from("."))
+    }
+
+    #[test]
+    fn test_file_exists() {
+        let adapter = create_adapter_in_current_directory();
+        assert!(adapter.file_exists(&FilePath::from("Cargo.toml")).unwrap());
+        assert!(
+            !adapter
+                .file_exists(&FilePath::from("non_existent_file"))
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_read_file() {
+        let adapter = create_adapter_in_current_directory();
+        let mut file = adapter.read_file(&FilePath::from("Cargo.toml")).unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        assert!(contents.contains("workspace"));
+    }
+
+    #[test]
+    fn test_create_file() {
+        let context = setup();
+        let file_path = "test.txt";
+        let mut file = context
+            .adapter
+            .create_file(&FilePath::from(file_path))
+            .unwrap();
+        file.write_all(b"test").unwrap();
+        file.flush().unwrap();
+        drop(file);
+        let actual =
+            std::fs::read_to_string(context.temp_dir.as_path_untracked().join(file_path)).unwrap();
+        assert_eq!(actual, "test");
+    }
+
+    #[test]
+    fn create_directory_all() {
+        let context = setup();
+        let file_path = "foo/bar/baz";
+        context
+            .adapter
+            .create_directory_all(&FilePath::from(file_path))
+            .unwrap();
+        // second time
+        context
+            .adapter
+            .create_directory_all(&FilePath::from(file_path))
+            .unwrap();
+
+        let path = context.temp_dir.as_path_untracked().join(file_path);
+        assert!(std::path::PathBuf::from(&path).exists());
+        assert!(std::path::PathBuf::from(&path).is_dir());
+    }
+
+    #[test]
+    fn delete_directory_all() {
+        let context = setup();
+        let file_path = "foo/bar/baz";
+        let path = context.temp_dir.as_path_untracked().join(file_path);
+        std::fs::create_dir_all(&path.join("fizzbuzz")).unwrap();
+        context
+            .adapter
+            .delete_directory_all(&FilePath::from(file_path))
+            .unwrap();
+
+        let path = context.temp_dir.as_path_untracked().join(file_path);
+        assert!(!std::path::PathBuf::from(&path).exists());
+        assert!(
+            std::path::PathBuf::from(context.temp_dir.as_path_untracked().join("foo/bar")).exists()
+        );
+    }
+
+    #[test]
+    fn random_string() {
+        let adapter = create_adapter_in_current_directory();
+        let random_string = adapter.random_string().unwrap();
+        assert_eq!(random_string.len(), 16);
+    }
+}
