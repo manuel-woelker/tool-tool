@@ -342,7 +342,7 @@ mod tests {
             	    directory. This file should contain the tool configuration in KDL format.
 
             	For more information, please refer to the documentation.
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             PRINT:
 
             	The following commands are available: 
@@ -391,7 +391,7 @@ mod tests {
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
         "#]]);
         Ok(())
     }
@@ -403,7 +403,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/tmp/lsd-rand-0
@@ -449,7 +449,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/tmp/lsd-rand-0
@@ -488,7 +488,7 @@ mod tests {
         // Second time through, ensure we don't download again
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
@@ -509,7 +509,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             RANDOM STRING
@@ -543,7 +543,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             RANDOM STRING
@@ -578,7 +578,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             RANDOM STRING
@@ -606,7 +606,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/tmp/lsd-rand-0
@@ -651,7 +651,7 @@ mod tests {
         adapter.set_args(&["--commands"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             PRINT:
 
             	The following commands are available: 
@@ -671,7 +671,7 @@ mod tests {
         adapter.set_args(&["bar"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
@@ -695,7 +695,7 @@ mod tests {
         adapter.set_args(&["toolyhi"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
@@ -714,7 +714,7 @@ mod tests {
         adapter.set_args(&["toolyhi", "there", "what is this?\""]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
@@ -737,7 +737,7 @@ mod tests {
         adapter.set_exit_code(19);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/lsd-1.2.3/.tool-tool.sha512
@@ -765,7 +765,7 @@ mod tests {
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             PRINT:
             	Expanded tool-tool configuration:
             		lsd 1.2.3:
@@ -802,11 +802,11 @@ mod tests {
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             PRINT:
-            	ERROR running tool-tool (vTEST): Failed to parse KDL file '.tool-tool.v2.kdl'
+            	ERROR running tool-tool (vTEST): Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'
             	  Chain of causes:
-            	   0: Could not parse '.tool-tool.v2.kdl'
+            	   0: Could not parse '.tool-tool/tool-tool.v2.kdl'
             	   1: Failed to parse KDL document
 
             	  × Failed to parse KDL document
@@ -831,11 +831,11 @@ mod tests {
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.kdl
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
             	  Chain of causes:
-            	   0: Failed to parse KDL file '.tool-tool.v2.kdl'
+            	   0: Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'
             	   1: Unexpected top-level item: 'foo'
 
             	configuration::parse_config::parse_kdl

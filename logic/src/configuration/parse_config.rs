@@ -308,6 +308,6 @@ mod tests {
     test_parse_fail!(
         fail_misquote,
         r#""open quote only"#,
-        expect!["Failed to parse KDL file '.tool-tool.v2.kdl'"]
+        expect!["Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'"]
     );
 }
