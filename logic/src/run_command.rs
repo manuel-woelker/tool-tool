@@ -37,7 +37,7 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
         shellish_parse::parse(&command_config.command_string, ParseOptions::new())?;
     let binary = parsed_command.remove(0);
     let tool_path = workspace
-        .tool_tool_dir()
+        .cache_dir()
         .join(format!("{}-{}", tool_config.name, tool_config.version));
     let mut binary_path_maybe = None;
     let mut errors = vec![];

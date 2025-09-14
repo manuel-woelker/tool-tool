@@ -57,11 +57,11 @@ fn download_tool(
     tool: &ToolConfiguration,
     new_sha512sums: &mut Sha512Sums,
 ) -> ToolToolResult<()> {
-    let tool_tool_dir = workspace.tool_tool_dir();
+    let cache_dir = workspace.cache_dir();
     let host_platform = workspace.adapter().get_platform();
     let sha512sums = &workspace.checksums.sha512sums;
     let adapter = workspace.adapter();
-    let tool_path = tool_tool_dir.join(format!("{}-{}", tool.name, tool.version));
+    let tool_path = cache_dir.join(format!("{}-{}", tool.name, tool.version));
     let download_artifact = tool
         .download_urls
         .get(&host_platform)
