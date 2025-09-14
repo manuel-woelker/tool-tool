@@ -1,7 +1,8 @@
+use std::fmt::Write;
 use crate::configuration;
 use crate::workspace::Workspace;
-use kdl::{KdlDocument, KdlNode};
 use std::collections::BTreeMap;
+use toml_span::parse;
 use tool_tool_base::result::{Context, ToolToolResult, bail, err};
 use tracing::info;
 
@@ -15,29 +16,15 @@ pub fn load_checksums(workspace: &mut Workspace) -> ToolToolResult<()> {
         .tool_tool_dir()
         .join(configuration::CHECKSUM_FILE_NAME);
     let mut sha512sums = BTreeMap::new();
+
     if let Ok(checksum_file) = workspace.adapter().read_file(&checksums_filename) {
-        let checksum_kdl = std::io::read_to_string(checksum_file)?;
-        let result = checksum_kdl
-            .parse::<KdlDocument>()
-            .with_context(|| format!("Could not parse '{checksums_filename}'"))?;
-        for node in result.nodes() {
-            match node.name().value() {
-                "sha512sums" => {
-                    for child in node.children().iter().flat_map(|entry| entry.nodes()) {
-                        let url = child.name().value().to_string();
-                        let checksum = child
-                            .get(0)
-                            .ok_or_else(|| err!("expected checksum"))?
-                            .as_string()
-                            .ok_or_else(|| err!("expected checksum to be a string"))?
-                            .to_string();
-                        sha512sums.insert(url, checksum);
-                    }
-                }
-                other => {
-                    bail!("Unknown node '{other}' in checksums file '{checksums_filename}'");
-                }
-            }
+        let checksum_string = std::io::read_to_string(checksum_file)?;
+        let document = parse(&checksum_string)?;
+        let sha512sums_node = document.pointer("/sha512sums").ok_or_else(|| err!("expected sha512sums"))?;
+        for (key, value) in sha512sums_node.as_table().ok_or_else(|| err!("expected sha512sums to be a table"))? {
+            let url = key.name.as_ref();
+            let checksum = value.as_str().ok_or_else(|| err!("expected checksum to be a string"))?;
+            sha512sums.insert(url.to_string(), checksum.to_string());
         }
     } else {
         info!("Checksums file '{checksums_filename}' creating a new one");
@@ -48,28 +35,26 @@ pub fn load_checksums(workspace: &mut Workspace) -> ToolToolResult<()> {
 }
 
 pub fn save_checksums(workspace: &Workspace) -> ToolToolResult<()> {
+    let mut content = String::new();
+    writeln!(content, "[sha512sums]")?;
+
+    for (url, checksum) in workspace.checksums.sha512sums.iter() {
+        // TODO: escape url and checksum
+        writeln!(content, "\"{url}\"=\"{checksum}\"")?;
+    }
+
     let checksums_filename = workspace
         .tool_tool_dir()
         .join(configuration::CHECKSUM_FILE_NAME);
-    let mut document = KdlDocument::new();
-    let mut children = KdlDocument::new();
-    for (url, checksum) in workspace.checksums.sha512sums.iter() {
-        let mut entry = KdlNode::new(url.as_str());
-        entry.insert(0, checksum.clone());
-        children.nodes_mut().push(entry);
-    }
-    let mut sums_node = KdlNode::new("sha512sums");
-    sums_node.set_children(children);
-    document.nodes_mut().push(sums_node);
     let mut checksums_file = workspace.adapter().create_file(&checksums_filename)?;
-    checksums_file.write_all(document.to_string().as_bytes())?;
+    checksums_file.write_all(content.as_bytes())?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configuration::{CHECKSUM_FILE_NAME, TOOL_TOOL_DIRECTORY};
+    use crate::configuration::{ToolToolConfiguration, CHECKSUM_FILE_NAME, TOOL_TOOL_DIRECTORY};
     use crate::mock_adapter::MockAdapter;
     use crate::runner_initial::load_config;
     use expect_test::expect;
@@ -97,9 +82,8 @@ mod tests {
         adapter.set_file(
             &format!("{TOOL_TOOL_DIRECTORY}/{CHECKSUM_FILE_NAME}"),
             r#"
-            sha512sums {
-                "foo" "bar"
-            }
+            [sha512sums]
+            "foo"="bar"
         "#,
         );
 
@@ -115,6 +99,29 @@ mod tests {
             }
         "#]]
         .assert_debug_eq(&workspace.checksums);
+        Ok(())
+    }
+
+    #[test]
+    fn test_save_checksums() -> ToolToolResult<()> {
+        let adapter = MockAdapter::new();
+        let config = ToolToolConfiguration {
+            tools: vec![],
+        };
+
+        let adapter_rc = Rc::new(adapter);
+        let mut workspace = Workspace::new(config, adapter_rc.clone());
+        workspace.checksums.sha512sums.insert("foo".to_string(), "bar".to_string());
+        workspace.checksums.sha512sums.insert("http://example.com/?query=%22foo%22".to_string(), "baa1a3fc26533eb1578adee93b38044fb06e273ed90d23e52b686b9af59792440fc18ba3334d9050dfb07a223744cfa156747dbaef74b65349b806ffa739070e".to_string());
+        save_checksums(&mut workspace)?;
+        adapter_rc.verify_effects(
+        expect![[r#"
+            CREATE FILE: .tool-tool/v2/checksums.toml
+            WRITE FILE: .tool-tool/v2/checksums.toml -> [sha512sums]
+            "foo"="bar"
+            "http://example.com/?query=%22foo%22"="baa1a3fc26533eb1578adee93b38044fb06e273ed90d23e52b686b9af59792440fc18ba3334d9050dfb07a223744cfa156747dbaef74b65349b806ffa739070e"
+
+        "#]]);
         Ok(())
     }
 }

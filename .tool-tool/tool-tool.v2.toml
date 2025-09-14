@@ -1,0 +1,39 @@
+[tools.lsd]
+download
+
+tools {
+// cf. https://github.com/lsd-rs/lsd
+	lsd "0.17.0" {
+		download {
+			linux "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-unknown-linux-gnu.tar.gz"
+			windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
+		}
+		commands {
+			lsd "lsd" description="List directory contents"
+		}
+		env {
+		}
+	}
+	node "22.19.0" {
+		download {
+			windows "https://nodejs.org/dist/v${version}/node-v${version}-win-x64.zip"
+		}
+		commands {
+			node "node"
+		}
+		env {
+			foo "bar"
+		}
+	}
+	lua "5.4.6" {
+		download {
+			// TODO: set strip_directories = 0
+			windows "https://github.com/DevelopersCommunity/cmake-lua/releases/download/v${version}/Lua-${version}-win64.zip"
+		}
+		commands {
+			lua "lua"
+			luav "lua -v"
+			luax #"lua -e "print('Hello World!')""#
+		}
+	}
+}

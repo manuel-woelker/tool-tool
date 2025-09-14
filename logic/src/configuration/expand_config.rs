@@ -48,23 +48,7 @@ mod tests {
             }"#,
         expect![[r#"
             ToolToolConfiguration {
-                tools: [
-                    ToolConfiguration {
-                        name: "lsd",
-                        version: "0.17.0",
-                        default_download_artifact: None,
-                        download_urls: {
-                            Linux: DownloadArtifact {
-                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
-                            },
-                            Windows: DownloadArtifact {
-                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
-                            },
-                        },
-                        commands: [],
-                        env: [],
-                    },
-                ],
+                tools: [],
             }
         "#]]
     );

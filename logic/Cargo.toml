@@ -8,13 +8,13 @@ tool-tool-base = {path = "../base"}
 
 tracing = { workspace = true }
 relative-path = "2.0.1"
-kdl = "6.3.4"
 miette = { version = "7.6.0", features = ["fancy"] }
 sha2 = "0.10.9"
 zip = "4.6.1"
 flate2 = "1.1.2"
 tar = "0.4.44"
 shellish_parse = "2.2.0"
+toml-span = "0.5.2"
 
 [dev-dependencies]
 expect-test = "1.5.1"

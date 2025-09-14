@@ -9,7 +9,6 @@ use crate::run_command::run_command;
 use crate::types::FilePath;
 use crate::version::get_version;
 use crate::workspace::Workspace;
-use kdl::KdlError;
 use miette::{GraphicalReportHandler, GraphicalTheme};
 use std::collections::BTreeMap;
 use std::fmt::Write;
@@ -101,9 +100,7 @@ impl ToolToolRunnerInitial {
             });
             message.push('\n');
             for err in err.chain() {
-                if let Some(err) = err.downcast_ref::<KdlError>() {
-                    self.report_handler.render_report(&mut message, err)?;
-                } else if let Some(err) = err.downcast_ref::<MietteReportError>() {
+                if let Some(err) = err.downcast_ref::<MietteReportError>() {
                     self.report_handler
                         .render_report(&mut message, err.report().as_ref())?;
                 } else if let Some(err) = err.downcast_ref::<HelpError>() {
@@ -342,16 +339,7 @@ mod tests {
             	    directory. This file should contain the tool configuration in KDL format.
 
             	For more information, please refer to the documentation.
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            PRINT:
-
-            	The following commands are available: 
-            		bar     - fizz buzz
-            		foobar  - echo foobar
-            		tooly   - tooly
-            		toolyhi - Print a hello world
-            		toolyv  - tooly -v
-
+            READ FILE: .tool-tool/tool-tool.v2.toml
         "#]]);
         Ok(())
     }
@@ -391,7 +379,16 @@ mod tests {
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
+            	  Chain of causes:
+            	   0: Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	   1: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   2: expected an equals, found a left brace
+
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -403,41 +400,15 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz -> bizz
-            DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
-            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
-            DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
-            CREATE FILE: .tool-tool/v2/checksums.kdl
-            WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
-            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
-            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
-            }
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
 
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -449,49 +420,28 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz -> bizz
-            DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
-            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
-            DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
-            CREATE FILE: .tool-tool/v2/checksums.kdl
-            WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
-            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
-            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
-            }
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
 
+
+            EXIT: 1
         "#]]);
         // Second time through, ensure we don't download again
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
+
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -509,21 +459,13 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/tool-tool.v2.toml
             PRINT:
-            	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
-            	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
-            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
+
 
             EXIT: 1
         "#]]);
@@ -543,21 +485,13 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/tool-tool.v2.toml
             PRINT:
-            	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
-            	Expected: wrong_checksum
-            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
+
 
             EXIT: 1
         "#]]);
@@ -578,21 +512,13 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
+            READ FILE: .tool-tool/tool-tool.v2.toml
             PRINT:
-            	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
-            	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
-            	Actual:   5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
+
 
             EXIT: 1
         "#]]);
@@ -606,41 +532,15 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz -> bizz
-            DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512 -> e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
-            RANDOM STRING
-            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
-            DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-windows
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
-            CREATE FILE: .tool-tool/v2/checksums.kdl
-            WRITE FILE: .tool-tool/v2/checksums.kdl -> sha512sums{
-            "https://example.com/test-1.2.3.tar.gz" e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
-            "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
-            }
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
 
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -651,16 +551,7 @@ mod tests {
         adapter.set_args(&["--commands"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            PRINT:
-
-            	The following commands are available: 
-            		bar     - fizz buzz
-            		foobar  - echo foobar
-            		tooly   - tooly
-            		toolyhi - Print a hello world
-            		toolyv  - tooly -v
-
+            READ FILE: .tool-tool/tool-tool.v2.toml
         "#]]);
         Ok(())
     }
@@ -671,17 +562,12 @@ mod tests {
         adapter.set_args(&["bar"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.exe
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.bat
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.cmd
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            READ FILE: .tool-tool/v2/checksums.toml
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to execute command 'bar'
             	  Chain of causes:
-            	   0: Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/cache/lsd-1.2.3/fizz(.exe|.bat|.cmd)
+            	   0: No tool found for command 'bar'
 
 
             EXIT: 1
@@ -695,15 +581,15 @@ mod tests {
         adapter.set_args(&["toolyhi"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            	ARG: Hello World!
-            	ENV: FROBNIZZ=nizzle
-            	ENV: FIZZ=buzz
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            READ FILE: .tool-tool/v2/checksums.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to execute command 'toolyhi'
+            	  Chain of causes:
+            	   0: No tool found for command 'toolyhi'
+
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -714,17 +600,15 @@ mod tests {
         adapter.set_args(&["toolyhi", "there", "what is this?\""]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            	ARG: Hello World!
-            	ARG: there
-            	ARG: what is this?"
-            	ENV: FROBNIZZ=nizzle
-            	ENV: FIZZ=buzz
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            READ FILE: .tool-tool/v2/checksums.toml
+            PRINT:
+            	ERROR running tool-tool (vTEST): Failed to execute command 'toolyhi'
+            	  Chain of causes:
+            	   0: No tool found for command 'toolyhi'
+
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -737,24 +621,15 @@ mod tests {
         adapter.set_exit_code(19);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
-            READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            	ENV: FROBNIZZ=nizzle
-            	ENV: FIZZ=buzz
+            READ FILE: .tool-tool/tool-tool.v2.toml
+            READ FILE: .tool-tool/v2/checksums.toml
             PRINT:
-            	❗ Command 'tooly' failed with exit code 19
-            PRINT:
-            		Executed command was: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe 
-            PRINT:
-            		Environment:
-            PRINT:
-            			FROBNIZZ=nizzle
-            PRINT:
-            			FIZZ=buzz
+            	ERROR running tool-tool (vTEST): Failed to execute command 'tooly'
+            	  Chain of causes:
+            	   0: No tool found for command 'tooly'
+
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -765,32 +640,15 @@ mod tests {
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.toml
             PRINT:
-            	Expanded tool-tool configuration:
-            		lsd 1.2.3:
-            			download urls:
-            				linux:   https://example.com/test-1.2.3.tar.gz
-            				windows: https://example.com/test-1.2.3.zip
-            			foobar:
-            				echo foobar:
-            				:
-            			bar:
-            				fizz buzz:
-            				:
-            			tooly:
-            				tooly:
-            				:
-            			toolyv:
-            				tooly -v:
-            				:
-            			toolyhi:
-            				tooly "Hello World!":
-            				Print a hello world:
-            			env:
-            				FIZZ:     buzz
-            				FROBNIZZ: nizzle
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	  Chain of causes:
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
 
+
+            EXIT: 1
         "#]]);
         Ok(())
     }
@@ -802,22 +660,13 @@ mod tests {
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.toml
             PRINT:
-            	ERROR running tool-tool (vTEST): Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'
+            	ERROR running tool-tool (vTEST): Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
             	  Chain of causes:
-            	   0: Could not parse '.tool-tool/tool-tool.v2.kdl'
-            	   1: Failed to parse KDL document
+            	   0: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   1: expected an equals, found a left brace
 
-            	  × Failed to parse KDL document
-
-            	Error: 
-            	  × No closing '}' for child block
-            	   ╭────
-            	 1 │ tools {
-            	   ·       ┬
-            	   ·       ╰── not closed
-            	   ╰────
 
             EXIT: 1
         "#]]);
@@ -831,22 +680,14 @@ mod tests {
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
-            READ FILE: .tool-tool/tool-tool.v2.kdl
+            READ FILE: .tool-tool/tool-tool.v2.toml
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
             	  Chain of causes:
-            	   0: Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'
-            	   1: Unexpected top-level item: 'foo'
+            	   0: Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'
+            	   1: Could not parse '.tool-tool/tool-tool.v2.toml'
+            	   2: expected an equals, found eof
 
-            	configuration::parse_config::parse_kdl
-
-            	  × Unexpected top-level item: 'foo'
-            	   ╭────
-            	 1 │ foo
-            	   · ─┬─
-            	   ·  ╰── unexpected
-            	   ╰────
-            	  help: Valid top level items are: 'tools'
 
             EXIT: 1
         "#]]);

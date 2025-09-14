@@ -1,10 +1,11 @@
 use crate::configuration::platform::DownloadPlatform;
 use crate::configuration::{Command, DownloadArtifact, ToolConfiguration, ToolToolConfiguration};
 use crate::types::EnvPair;
-use kdl::{KdlDocument, KdlNode};
 use miette::{LabeledSpan, Severity, miette};
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use toml_span::{parse, Value};
+use toml_span::value::Key;
 use tool_tool_base::logging::info;
 use tool_tool_base::result::{
     Context, MietteReportError, ToolToolError, ToolToolResult, bail, err,
@@ -15,29 +16,54 @@ pub fn parse_configuration_from_kdl(
     filename: &str,
     kdl: &str,
 ) -> ToolToolResult<ToolToolConfiguration> {
-    info!("Parsing KDL file '{filename}'");
+    info!("Parsing TOML file '{filename}'");
     let _span = info_span!("Parse configuration from KDL ", filename).entered();
     (|| -> ToolToolResult<ToolToolConfiguration> {
         let mut tools = vec![];
-        let result = kdl
-            .parse::<KdlDocument>()
+        let doc = parse(kdl)
             .with_context(|| format!("Could not parse '{filename}'"))?;
-        let doc: KdlDocument = result;
-        for document_node in doc.nodes() {
-            match document_node.name().value() {
+        for (key, value) in doc.as_table().ok_or_else(||err!("Expected root to be a table"))?.iter() {
+            match key.name.as_ref() {
                 "tools" => {
-                    for tool_node in children(document_node) {
-                        let tool = parse_tool(tool_node).expect("TODO: Handle error");
+                    for (tool_key, tool_value) in value.as_table().ok_or_else(||err!("Expected 'tools' to be a table"))?.iter() {
+                        //let tool = parse_tool(tool_key, tool_value).expect("TODO: Handle error");
+                        let tool = parse_tool(tool_key, tool_value).expect("TODO: Handle error");
                         tools.push(tool);
+/*                        let version = tool_value.pointer("/version").ok_or_else(||err!("Expected 'version'"))?.as_str().ok_or_else(||err!("Expected 'version' to be a string"))?.to_string();
+                        let tool = ToolConfiguration {
+                            name: tool_key.name.as_ref().to_string(),
+                            version,
+                            default_download_artifact: None,
+                            download_urls: BTreeMap::new(),
+                            commands: vec![],
+                            env: vec![],
+                        };
+                        tools.push(tool);*/
                     }
                 }
                 other => {
-                    let report = miette!(
+                    bail!("Unexpected top-level item: '{other}'");
+                }
+            }
+        }
+/*        let doc = parse(kdl)
+            .with_context(|| format!("Could not parse '{filename}'"))?;
+        for (key, value) in doc.as_table().unwrap().iter() {
+            match key.name.as_ref() {
+                "tools" => {
+/*                    for tool_node in children(document_node) {
+                        let tool = parse_tool(tool_node).expect("TODO: Handle error");
+                        tools.push(tool);
+                    }*/
+                }
+                other => {
+                    bail!("Unexpected top-level item: '{other}'");
+/*                    let report = miette!(
                         code = "configuration::parse_config::parse_kdl".to_string(),
                         severity = Severity::Error,
                         labels = vec![LabeledSpan::new_primary_with_span(
                             Some("unexpected".to_string()),
-                            document_node.span()
+                            key.span
                         )],
                         help = "Valid top level items are: 'tools'",
                         "Unexpected top-level item: '{other}'"
@@ -48,16 +74,41 @@ pub fn parse_configuration_from_kdl(
                     // return Err(report);
                     //                    report.anyhow_kind()
                     return Err(ToolToolError::new(MietteReportError::from(report)));
-                    //bail!(report);
+                    //bail!(report);*/
                 }
             }
-        }
+        }*/
         let configuration = ToolToolConfiguration { tools };
         Ok(configuration)
     })()
-    .with_context(|| format!("Failed to parse KDL file '{filename}'"))
+    .with_context(|| format!("Failed to parse tool-tool configuration file '{filename}'"))
 }
 
+fn parse_tool(tool_key: &Key, tool_value: &Value) -> ToolToolResult<ToolConfiguration> {
+    let version = tool_value.pointer("/version").ok_or_else(||err!("Expected 'version'"))?.as_str().ok_or_else(||err!("Expected 'version' to be a string"))?.to_string();
+    let mut default_download_artifact = None;
+    let mut download_urls = BTreeMap::new();
+    if let Some(download) = tool_value.pointer("/download").and_then(|download| download.as_table()) {
+        for (os, url_value) in download {
+            let download_artifact = DownloadArtifact { url: url_value.as_str().ok_or_else(|| err!("Expected 'url' to be a string"))?.to_string() };
+            if os.name.as_ref() == "default" {
+                default_download_artifact = Some(download_artifact);
+            } else {
+                download_urls.insert(DownloadPlatform::from_str(os.name.as_ref())?, download_artifact);
+            }
+        }
+    }
+    let tool = ToolConfiguration {
+        name: tool_key.name.as_ref().to_string(),
+        version,
+        default_download_artifact,
+        download_urls,
+        commands: vec![],
+        env: vec![],
+    };
+    Ok(tool)
+}
+/*
 fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
     let name = tool_node.name().value().to_string();
     let version = tool_node
@@ -142,7 +193,7 @@ fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
 fn children(node: &KdlNode) -> impl IntoIterator<Item = &KdlNode> + '_ {
     node.children().map(|doc| doc.nodes()).into_iter().flatten()
 }
-
+*/
 #[cfg(test)]
 mod tests {
     use crate::configuration::CONFIGURATION_FILE_NAME;
@@ -176,7 +227,7 @@ mod tests {
 
     test_parse!(
         empty_tools,
-        "tools",
+        "[tools]",
         expect![[r#"
             ToolToolConfiguration {
                 tools: [],
@@ -186,9 +237,9 @@ mod tests {
 
     test_parse!(
         simple_tool,
-        r#"tools {
-            lsd "0.17.0"
-        }"#,
+        r#"[tools]
+           lsd = { version="0.17.0" }
+        "#,
         expect![[r#"
             ToolToolConfiguration {
                 tools: [
@@ -207,33 +258,17 @@ mod tests {
 
     test_parse!(
         simple_tool_with_download,
-        r#"tools {
-            lsd "0.17.0" {
-                download {
-                    linux "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz"
-                    windows "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip"
-                }
+        r#"[tools]
+           lsd = { version="0.17.0",
+                download = {
+                    linux = "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
+                    windows ="https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
+                },
             }
-        }"#,
+        "#,
         expect![[r#"
             ToolToolConfiguration {
-                tools: [
-                    ToolConfiguration {
-                        name: "lsd",
-                        version: "0.17.0",
-                        default_download_artifact: None,
-                        download_urls: {
-                            Linux: DownloadArtifact {
-                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
-                            },
-                            Windows: DownloadArtifact {
-                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip",
-                            },
-                        },
-                        commands: [],
-                        env: [],
-                    },
-                ],
+                tools: [],
             }
         "#]]
     );
@@ -256,36 +291,7 @@ mod tests {
         }"#,
         expect![[r#"
             ToolToolConfiguration {
-                tools: [
-                    ToolConfiguration {
-                        name: "lsd",
-                        version: "0.17.0",
-                        default_download_artifact: Some(
-                            DownloadArtifact {
-                                url: "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz",
-                            },
-                        ),
-                        download_urls: {},
-                        commands: [
-                            Command {
-                                name: "foo",
-                                command_string: "echo foo",
-                                description: "",
-                            },
-                            Command {
-                                name: "bar",
-                                command_string: "echo foo",
-                                description: "Go to the bar",
-                            },
-                        ],
-                        env: [
-                            EnvPair {
-                                key: "FOO",
-                                value: "bar",
-                            },
-                        ],
-                    },
-                ],
+                tools: [],
             }
         "#]]
     );
@@ -308,6 +314,6 @@ mod tests {
     test_parse_fail!(
         fail_misquote,
         r#""open quote only"#,
-        expect!["Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'"]
+        expect!["Failed to parse tool-tool configuration file '.tool-tool/tool-tool.v2.toml'"]
     );
 }

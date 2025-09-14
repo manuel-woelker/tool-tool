@@ -8,8 +8,8 @@ miette = { version = "7.6.0", features = ["fancy"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 relative-path = "2.0.1"
-kdl = "6.3.4"
 assertables = "9.8.2"
+toml-span = "0.5.2"
 
 [profile.dev.package."*"]
 # Set the default for dependencies in Development mode.
