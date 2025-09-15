@@ -9,6 +9,8 @@ pub mod help;
 pub(crate) mod mock_adapter;
 pub mod run_command;
 pub mod runner_initial;
+pub mod template_expander;
+pub mod template_string;
 #[cfg(test)]
 pub(crate) mod test_util;
 pub mod types;
