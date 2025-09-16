@@ -2,23 +2,35 @@ use crate::configuration::ToolToolConfiguration;
 use crate::configuration::platform::DownloadPlatform;
 use crate::template_expander::TemplateExpander;
 use crate::template_string::TemplateString;
-use tool_tool_base::result::ToolToolResult;
+use tool_tool_base::result::{ToolToolResult, err};
 
 pub fn expand_configuration_template_expressions(
     configuration: &mut ToolToolConfiguration,
     host_platform: DownloadPlatform,
 ) -> ToolToolResult<()> {
+    let original_configuration = configuration.clone();
     let mut expander = TemplateExpander::default();
-
+    expander.add_replace_fn("dir", |substitution| {
+        let tool_name = &substitution.arguments[0];
+        let tool = original_configuration
+            .tools
+            .iter()
+            .find(|tool| tool.name == *tool_name)
+            .ok_or_else(|| err!("Could not find tool '{tool_name}'"))?;
+        Ok(format!(
+            ".tool-tool/v2/cache/{}-{}",
+            tool.name, tool.version
+        ))
+    });
     for tool in &mut configuration.tools {
-        expander.add_replace_fn("version", |_| tool.version.clone());
+        expander.add_replace_fn("version", |_| Ok(tool.version.clone()));
         for platform in DownloadPlatform::VALUES {
             if platform == host_platform {
                 expander.add_replace_fn(platform.as_str(), |substitution| {
-                    substitution.arguments[0].clone()
+                    Ok(substitution.arguments[0].clone())
                 });
             } else {
-                expander.add_replace_fn(platform.as_str(), |_| String::new());
+                expander.add_replace_fn(platform.as_str(), |_| Ok(String::new()));
             }
         }
         for download_artifact in tool.download_urls.values_mut() {
@@ -68,8 +80,11 @@ mod tests {
                         windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
                     }
                     commands {
-                        lsd "${linux:bin}/lsd{windows:.exe}"
+                        lsd "${linux:bin}/lsd{windows:.exe} ${dir:foo}"
                     }
+                }
+                foo "1.2.3" {
+
                 }
             }"#,
         expect![[r#"
@@ -90,10 +105,18 @@ mod tests {
                         commands: [
                             Command {
                                 name: "lsd",
-                                command_string: "bin/lsd{windows:.exe}",
+                                command_string: "bin/lsd{windows:.exe} .tool-tool/v2/cache/foo-1.2.3",
                                 description: "",
                             },
                         ],
+                        env: [],
+                    },
+                    ToolConfiguration {
+                        name: "foo",
+                        version: "1.2.3",
+                        default_download_artifact: None,
+                        download_urls: {},
+                        commands: [],
                         env: [],
                     },
                 ],

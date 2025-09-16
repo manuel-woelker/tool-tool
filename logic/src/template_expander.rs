@@ -8,14 +8,14 @@ pub struct TemplateExpander<'a> {
 }
 
 pub trait SubstitutionReplacer {
-    fn replace(&self, substitution: &TemplateStringSubstitution) -> String;
+    fn replace(&self, substitution: &TemplateStringSubstitution) -> ToolToolResult<String>;
 }
 
 impl<F> SubstitutionReplacer for F
 where
-    for<'a> F: Fn(&'a TemplateStringSubstitution) -> String,
+    for<'a> F: Fn(&'a TemplateStringSubstitution) -> ToolToolResult<String>,
 {
-    fn replace(&self, substitution: &TemplateStringSubstitution) -> String {
+    fn replace(&self, substitution: &TemplateStringSubstitution) -> ToolToolResult<String> {
         self(substitution)
     }
 }
@@ -31,7 +31,7 @@ impl<'a> TemplateExpander<'a> {
     pub fn add_replace_fn(
         &mut self,
         key: impl Into<String>,
-        replacer: impl Fn(&TemplateStringSubstitution) -> String + 'a,
+        replacer: impl Fn(&TemplateStringSubstitution) -> ToolToolResult<String> + 'a,
     ) {
         self.replacer.insert(key.into(), Box::new(replacer));
     }
@@ -45,7 +45,7 @@ impl<'a> TemplateExpander<'a> {
                 }
                 TemplateStringPart::Substitution(substitution) => {
                     if let Some(replacer) = self.replacer.get(&substitution.directive) {
-                        result.push_str(&replacer.replace(substitution));
+                        result.push_str(&replacer.replace(substitution)?);
                     } else {
                         bail!(
                             "Unknown substitution directive '{}'",
@@ -69,7 +69,7 @@ mod tests {
         let version = "1.0.0".to_string();
         let borrowed_version = &version;
         let mut expander = TemplateExpander::default();
-        expander.add_replace_fn("version", |_| borrowed_version.to_string());
+        expander.add_replace_fn("version", |_| Ok(borrowed_version.to_string()));
         let actual = expander
             .expand(TemplateString::try_from("foo${version}bar").unwrap())
             .unwrap();
@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn test_template_expander_with_arguments() {
         let mut expander = TemplateExpander::default();
-        expander.add_replace_fn("fizz", |substitution| substitution.arguments[0].clone());
+        expander.add_replace_fn("fizz", |substitution| Ok(substitution.arguments[0].clone()));
         let actual = expander
             .expand(TemplateString::try_from("foo${fizz:buzz}bar").unwrap())
             .unwrap();

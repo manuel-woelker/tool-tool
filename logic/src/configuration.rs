@@ -12,12 +12,12 @@ pub const TOOL_TOOL_DIRECTORY: &str = ".tool-tool/v2/";
 pub const CACHE_DIRECTORY: &str = ".tool-tool/v2/cache";
 pub const CHECKSUM_FILE_NAME: &str = "checksums.kdl";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DownloadArtifact {
     pub url: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Command {
     pub name: String,
     pub command_string: String,
@@ -34,7 +34,7 @@ impl Command {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToolConfiguration {
     pub name: String,
     pub version: String,
@@ -44,7 +44,7 @@ pub struct ToolConfiguration {
     pub env: Env,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToolToolConfiguration {
     pub tools: Vec<ToolConfiguration>,
 }
