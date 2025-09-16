@@ -1,4 +1,4 @@
-use crate::template_string::{TemplateString, TemplateStringPart};
+use crate::template_string::{TemplateString, TemplateStringPart, TemplateStringSubstitution};
 use std::collections::HashMap;
 use tool_tool_base::result::{ToolToolResult, bail};
 
@@ -8,12 +8,12 @@ pub struct TemplateExpander<'a> {
 }
 
 pub trait SubstitutionReplacer {
-    fn replace(&self) -> String;
+    fn replace(&self, substitution: &TemplateStringSubstitution) -> String;
 }
 
-impl<T: Fn() -> String> SubstitutionReplacer for T {
-    fn replace(&self) -> String {
-        self()
+impl<T: Fn(&TemplateStringSubstitution) -> String> SubstitutionReplacer for T {
+    fn replace(&self, substitution: &TemplateStringSubstitution) -> String {
+        self(substitution)
     }
 }
 
@@ -21,7 +21,7 @@ impl<'a> TemplateExpander<'a> {
     pub fn add_replacer(
         &mut self,
         key: impl Into<String>,
-        replacer: impl SubstitutionReplacer + 'a,
+        replacer: impl Fn(&TemplateStringSubstitution) -> String + 'a,
     ) {
         self.replacer.insert(key.into(), Box::new(replacer));
     }
@@ -35,9 +35,12 @@ impl<'a> TemplateExpander<'a> {
                 }
                 TemplateStringPart::Substitution(substitution) => {
                     if let Some(replacer) = self.replacer.get(&substitution.directive) {
-                        result.push_str(&replacer.replace());
+                        result.push_str(&replacer.replace(substitution));
                     } else {
-                        bail!("Unknown substituion directive '{}'", substitution.directive);
+                        bail!(
+                            "Unknown substitution directive '{}'",
+                            substitution.directive
+                        );
                     }
                 }
             }
@@ -56,10 +59,20 @@ mod tests {
         let version = "1.0.0".to_string();
         let borrowed_version = &version;
         let mut expander = TemplateExpander::default();
-        expander.add_replacer("version", || borrowed_version.to_string());
+        expander.add_replacer("version", |_| borrowed_version.to_string());
         let actual = expander
             .expand(TemplateString::try_from("foo${version}bar").unwrap())
             .unwrap();
         assert_eq!(actual, "foo1.0.0bar");
+    }
+
+    #[test]
+    fn test_template_expander_with_arguments() {
+        let mut expander = TemplateExpander::default();
+        expander.add_replacer("fizz", |substitution| substitution.arguments[0].clone());
+        let actual = expander
+            .expand(TemplateString::try_from("foo${fizz:buzz}bar").unwrap())
+            .unwrap();
+        assert_eq!(actual, "foobuzzbar");
     }
 }

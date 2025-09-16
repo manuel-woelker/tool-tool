@@ -22,9 +22,10 @@ impl TemplateStringPart {
         Self::PlainText(text.into())
     }
 
-    pub fn substitution(directive: impl Into<String>) -> Self {
+    pub fn substitution(directive: impl Into<String>, arguments: Vec<String>) -> Self {
         Self::Substitution(TemplateStringSubstitution {
             directive: directive.into(),
+            arguments,
         })
     }
 }
@@ -32,6 +33,7 @@ impl TemplateStringPart {
 #[derive(Debug)]
 pub struct TemplateStringSubstitution {
     pub directive: String,
+    pub arguments: Vec<String>,
 }
 
 impl TemplateString {
@@ -44,7 +46,10 @@ impl TemplateString {
                     writeln!(test_string, "Plain '{text}'").unwrap();
                 }
                 TemplateStringPart::Substitution(substitution) => {
-                    writeln!(test_string, "Template '{}'", substitution.directive).unwrap();
+                    writeln!(test_string, "Directive '{}'", substitution.directive).unwrap();
+                    for argument in &substitution.arguments {
+                        writeln!(test_string, "\tArgument '{argument}'").unwrap();
+                    }
                 }
             }
         }
@@ -74,10 +79,14 @@ impl TryFrom<&str> for TemplateString {
                 }
                 // TODO: handle missing closing }
                 // TODO: handle empty string
+
                 if start_pos < current_pos {
-                    parts.push(TemplateStringPart::substitution(
-                        &value[start_pos..current_pos],
-                    ));
+                    let substitution_string = &value[start_pos..current_pos];
+                    let (directive, args) = substitution_string
+                        .split_once(':')
+                        .unwrap_or((substitution_string, ""));
+                    let arguments = args.split(',').map(|s| s.to_string()).collect();
+                    parts.push(TemplateStringPart::substitution(directive, arguments));
                 }
                 current_pos += 1;
                 start_pos = current_pos;
@@ -102,15 +111,20 @@ mod tests {
         let template_string = TemplateString {
             parts: vec![
                 TemplateStringPart::plain("Hello"),
-                TemplateStringPart::substitution("foo"),
-                TemplateStringPart::substitution("bar"),
+                TemplateStringPart::substitution("foo", vec!["foo".to_string(), "bar".to_string()]),
+                TemplateStringPart::substitution("bar", vec![]),
                 TemplateStringPart::plain("world!"),
             ],
         };
-        assert_eq!(
-            template_string.as_test_string(),
-            "Plain 'Hello'\nTemplate 'foo'\nTemplate 'bar'\nPlain 'world!'\n"
-        );
+        expect![[r#"
+            Plain 'Hello'
+            Directive 'foo'
+            	Argument 'foo'
+            	Argument 'bar'
+            Directive 'bar'
+            Plain 'world!'
+        "#]]
+        .assert_eq(&template_string.as_test_string());
     }
 
     fn test_parse(template_string: &str, expected: Expect) {
@@ -143,7 +157,36 @@ mod tests {
         all_template,
         "${version}",
         expect![[r#"
-            Template 'version'
+            Directive 'version'
+            	Argument ''
+        "#]]
+    );
+
+    test_parse!(
+        no_args,
+        "${version:}",
+        expect![[r#"
+            Directive 'version'
+            	Argument ''
+        "#]]
+    );
+
+    test_parse!(
+        one_arg,
+        "${version:one}",
+        expect![[r#"
+            Directive 'version'
+            	Argument 'one'
+        "#]]
+    );
+
+    test_parse!(
+        two_args,
+        "${version:one,two}",
+        expect![[r#"
+            Directive 'version'
+            	Argument 'one'
+            	Argument 'two'
         "#]]
     );
 
@@ -152,9 +195,11 @@ mod tests {
         "foo${bar}baz${fizz}buzz",
         expect![[r#"
             Plain 'foo'
-            Template 'bar'
+            Directive 'bar'
+            	Argument ''
             Plain 'baz'
-            Template 'fizz'
+            Directive 'fizz'
+            	Argument ''
             Plain 'buzz'
         "#]]
     );
@@ -162,14 +207,19 @@ mod tests {
         mixed_2,
         "${blip}foo${bar}baz${fizz}buzz${blob}${blab}",
         expect![[r#"
-            Template 'blip'
+            Directive 'blip'
+            	Argument ''
             Plain 'foo'
-            Template 'bar'
+            Directive 'bar'
+            	Argument ''
             Plain 'baz'
-            Template 'fizz'
+            Directive 'fizz'
+            	Argument ''
             Plain 'buzz'
-            Template 'blob'
-            Template 'blab'
+            Directive 'blob'
+            	Argument ''
+            Directive 'blab'
+            	Argument ''
         "#]]
     );
 }

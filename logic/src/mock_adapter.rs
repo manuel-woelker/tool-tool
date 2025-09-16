@@ -42,7 +42,7 @@ impl MockAdapter {
                                 bar "fizz buzz"
                                 tooly "tooly"
                                 toolyv "tooly -v"
-                                toolyhi #"tooly "Hello World!""# description="Print a hello world"
+                                toolyhi #"tooly "Hello ${linux:Linux}${windows:Windows}${macos:MacOS} World!""# description="Print a hello world"
                             }
                             env {
                                 FROBNIZZ "nizzle"

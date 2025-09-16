@@ -10,6 +10,8 @@ pub enum DownloadPlatform {
 }
 
 impl DownloadPlatform {
+    pub const VALUES: [Self; 3] = [Self::Linux, Self::MacOS, Self::Windows];
+
     pub fn as_str(&self) -> &'static str {
         match self {
             DownloadPlatform::Windows => "windows",

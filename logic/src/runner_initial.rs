@@ -161,10 +161,16 @@ impl ToolToolRunnerInitial {
         for tool in &config.tools {
             output.push_str(&format!("\t{} {}:\n", tool.name, tool.version));
             output_map(&mut output, "download urls", &tool.download_urls);
+            output.push_str("\t\tcommands:\n");
             for command in &tool.commands {
-                output.push_str(&format!("\t\t{}:\n", command.name));
-                output.push_str(&format!("\t\t\t{}:\n", command.command_string));
-                output.push_str(&format!("\t\t\t{}:\n", command.description));
+                output.push_str(&format!("\t\t\t{}\n", command.name));
+                output.push_str(&format!(
+                    "\t\t\t\tcommand:     {}\n",
+                    command.command_string
+                ));
+                if !command.description.is_empty() {
+                    output.push_str(&format!("\t\t\t\tdescription: {}\n", command.description));
+                }
             }
             let env_map = BTreeMap::from_iter(
                 tool.env
@@ -226,7 +232,7 @@ pub fn load_config(adapter: &dyn Adapter) -> ToolToolResult<ToolToolConfiguratio
     let config_path = FilePath::from(CONFIGURATION_FILE_NAME);
     let config_string = std::io::read_to_string(adapter.read_file(&config_path)?)?;
     let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
-    expand_configuration_template_expressions(&mut config)?;
+    expand_configuration_template_expressions(&mut config, adapter.get_platform())?;
     Ok(config)
 }
 
@@ -701,7 +707,7 @@ mod tests {
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            	ARG: Hello World!
+            	ARG: Hello Windows World!
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
         "#]]);
@@ -720,7 +726,7 @@ mod tests {
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            	ARG: Hello World!
+            	ARG: Hello Windows World!
             	ARG: there
             	ARG: what is this?"
             	ENV: FROBNIZZ=nizzle
@@ -772,21 +778,18 @@ mod tests {
             			download urls:
             				linux:   https://example.com/test-1.2.3.tar.gz
             				windows: https://example.com/test-1.2.3.zip
-            			foobar:
-            				echo foobar:
-            				:
-            			bar:
-            				fizz buzz:
-            				:
-            			tooly:
-            				tooly:
-            				:
-            			toolyv:
-            				tooly -v:
-            				:
-            			toolyhi:
-            				tooly "Hello World!":
-            				Print a hello world:
+            			commands:
+            				foobar
+            					command:     echo foobar
+            				bar
+            					command:     fizz buzz
+            				tooly
+            					command:     tooly
+            				toolyv
+            					command:     tooly -v
+            				toolyhi
+            					command:     tooly "Hello Linux World!"
+            					description: Print a hello world
             			env:
             				FIZZ:     buzz
             				FROBNIZZ: nizzle
