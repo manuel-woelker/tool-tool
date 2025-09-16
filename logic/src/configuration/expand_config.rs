@@ -11,14 +11,14 @@ pub fn expand_configuration_template_expressions(
     let mut expander = TemplateExpander::default();
 
     for tool in &mut configuration.tools {
-        expander.add_replacer("version", |_| tool.version.clone());
+        expander.add_replace_fn("version", |_| tool.version.clone());
         for platform in DownloadPlatform::VALUES {
             if platform == host_platform {
-                expander.add_replacer(platform.as_str(), |substitution| {
+                expander.add_replace_fn(platform.as_str(), |substitution| {
                     substitution.arguments[0].clone()
                 });
             } else {
-                expander.add_replacer(platform.as_str(), |_| String::new());
+                expander.add_replace_fn(platform.as_str(), |_| String::new());
             }
         }
         for download_artifact in tool.download_urls.values_mut() {
