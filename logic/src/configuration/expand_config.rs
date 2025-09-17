@@ -1,5 +1,5 @@
-use crate::configuration::ToolToolConfiguration;
 use crate::configuration::platform::DownloadPlatform;
+use crate::configuration::{ToolToolConfiguration, find_command};
 use crate::template_expander::TemplateExpander;
 use crate::template_string::TemplateString;
 use tool_tool_base::result::{ToolToolResult, err};
@@ -9,30 +9,9 @@ pub fn expand_configuration_template_expressions(
     host_platform: DownloadPlatform,
 ) -> ToolToolResult<()> {
     let original_configuration = configuration.clone();
-    let mut expander = TemplateExpander::default();
-    expander.add_replace_fn("dir", |substitution| {
-        let tool_name = &substitution.arguments[0];
-        let tool = original_configuration
-            .tools
-            .iter()
-            .find(|tool| tool.name == *tool_name)
-            .ok_or_else(|| err!("Could not find tool '{tool_name}'"))?;
-        Ok(format!(
-            ".tool-tool/v2/cache/{}-{}",
-            tool.name, tool.version
-        ))
-    });
+    let mut expander = create_expander(&original_configuration, host_platform);
     for tool in &mut configuration.tools {
         expander.add_replace_fn("version", |_| Ok(tool.version.clone()));
-        for platform in DownloadPlatform::VALUES {
-            if platform == host_platform {
-                expander.add_replace_fn(platform.as_str(), |substitution| {
-                    Ok(substitution.arguments[0].clone())
-                });
-            } else {
-                expander.add_replace_fn(platform.as_str(), |_| Ok(String::new()));
-            }
-        }
         for download_artifact in tool.download_urls.values_mut() {
             let template_string = TemplateString::try_from(download_artifact.url.as_str())?;
             let new_url = expander.expand(template_string)?;
@@ -45,6 +24,52 @@ pub fn expand_configuration_template_expressions(
         }
     }
     Ok(())
+}
+
+fn create_expander(
+    config: &ToolToolConfiguration,
+    host_platform: DownloadPlatform,
+) -> TemplateExpander {
+    let mut expander = TemplateExpander::default();
+    expander.add_replace_fn("dir", |substitution| {
+        let tool_name = &substitution.arguments[0];
+        let tool = config
+            .tools
+            .iter()
+            .find(|tool| tool.name == *tool_name)
+            .ok_or_else(|| err!("Could not find tool '{tool_name}'"))?;
+        Ok(format!(
+            ".tool-tool/v2/cache/{}-{}",
+            tool.name, tool.version
+        ))
+    });
+    for platform in DownloadPlatform::VALUES {
+        if platform == host_platform {
+            expander.add_replace_fn(platform.as_str(), |substitution| {
+                Ok(substitution.arguments[0].clone())
+            });
+        } else {
+            expander.add_replace_fn(platform.as_str(), |_| Ok(String::new()));
+        }
+    }
+    expander.add_replace_fn("cmd", move |substitution| {
+        expand_command(&substitution.arguments[0], config, host_platform)
+    });
+    expander
+}
+
+// TODO: prevent recursion/stack overflow
+fn expand_command(
+    command_name: &str,
+    config: &ToolToolConfiguration,
+    host_platform: DownloadPlatform,
+) -> ToolToolResult<String> {
+    let (tool_config, command_config) = find_command(command_name, config)?;
+    let mut expander = create_expander(config, host_platform);
+    expander.add_replace_fn("version", |_| Ok(tool_config.version.clone()));
+    expander.expand(TemplateString::try_from(
+        command_config.command_string.as_str(),
+    )?)
 }
 
 #[cfg(test)]
@@ -72,7 +97,7 @@ mod tests {
             });
 
     test_parse_and_expand!(
-        test_expand_version,
+        test_expand_arguments,
         r#"tools {
                 lsd "0.17.0" {
                     download {
@@ -80,7 +105,9 @@ mod tests {
                         windows "https://github.com/Peltoche/lsd/releases/download/${version}/lsd-${version}-x86_64-pc-windows-msvc.zip"
                     }
                     commands {
-                        lsd "${linux:bin}/lsd{windows:.exe} ${dir:foo}"
+                        lsd "${linux:bin}/lsd${windows:.exe} ${dir:foo}"
+                        take2 "${cmd:take1} two"
+                        take1 "${cmd:lsd} one"
                     }
                 }
                 foo "1.2.3" {
@@ -105,7 +132,17 @@ mod tests {
                         commands: [
                             Command {
                                 name: "lsd",
-                                command_string: "bin/lsd{windows:.exe} .tool-tool/v2/cache/foo-1.2.3",
+                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3",
+                                description: "",
+                            },
+                            Command {
+                                name: "take2",
+                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3 one two",
+                                description: "",
+                            },
+                            Command {
+                                name: "take1",
+                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3 one",
                                 description: "",
                             },
                         ],

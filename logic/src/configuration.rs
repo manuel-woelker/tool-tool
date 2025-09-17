@@ -1,7 +1,9 @@
 use crate::configuration::platform::DownloadPlatform;
+use crate::help::generate_available_commands_message;
 use crate::types::Env;
 use std::collections::BTreeMap;
 use std::fmt::Display;
+use tool_tool_base::result::{HelpError, ToolToolError, ToolToolResult};
 
 pub mod expand_config;
 pub mod parse_config;
@@ -53,4 +55,26 @@ impl Display for DownloadArtifact {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.url)
     }
+}
+
+// TODO: unit test
+pub fn find_command<'a>(
+    command_name: &str,
+    config: &'a ToolToolConfiguration,
+) -> ToolToolResult<(&'a ToolConfiguration, &'a Command)> {
+    for tool in &config.tools {
+        for command in &tool.commands {
+            if command.name == command_name {
+                return Ok((tool, command));
+            }
+        }
+    }
+    let description = format!("No tool found for command '{command_name}'");
+    Err(
+        if let Some(message) = generate_available_commands_message(config) {
+            ToolToolError::from(HelpError::new(description, message))
+        } else {
+            ToolToolError::msg(description)
+        },
+    )
 }

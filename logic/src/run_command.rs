@@ -1,8 +1,8 @@
 use crate::adapter::ExecutionRequest;
-use crate::help::generate_available_commands_message;
+use crate::configuration::find_command;
 use crate::workspace::Workspace;
 use shellish_parse::ParseOptions;
-use tool_tool_base::result::{Context, HelpError, ToolToolError, ToolToolResult, bail};
+use tool_tool_base::result::{Context, ToolToolResult, bail};
 
 pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut command_args = workspace.adapter().args();
@@ -10,25 +10,7 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     command_args.remove(0);
     let command_name = command_args.remove(0);
     let config = workspace.config();
-    let Some((tool_config, command_config)) = ('command: {
-        for tool in &config.tools {
-            for command in &tool.commands {
-                if command.name == command_name {
-                    break 'command Some((tool, command));
-                }
-            }
-        }
-        None
-    }) else {
-        let description = format!("No tool found for command '{command_name}'");
-        return Err(
-            if let Some(message) = generate_available_commands_message(config) {
-                ToolToolError::from(HelpError::new(description, message))
-            } else {
-                ToolToolError::msg(description)
-            },
-        );
-    };
+    let (tool_config, command_config) = find_command(&command_name, config)?;
     let extensions = workspace
         .adapter()
         .get_platform()
