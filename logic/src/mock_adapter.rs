@@ -109,6 +109,10 @@ impl MockAdapter {
             .insert(FilePath::from(file_path), content.into());
     }
 
+    pub fn add_env(&self, key: &str, value: &str) {
+        self.write().env.push((key.to_string(), value.to_string()));
+    }
+
     pub fn verify_effects(&self, expected: Expect) {
         expected.assert_eq(&self.read().effects_string);
         self.write().effects_string.clear();

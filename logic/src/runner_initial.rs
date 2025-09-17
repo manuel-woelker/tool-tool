@@ -232,7 +232,7 @@ pub fn load_config(adapter: &dyn Adapter) -> ToolToolResult<ToolToolConfiguratio
     let config_path = FilePath::from(CONFIGURATION_FILE_NAME);
     let config_string = std::io::read_to_string(adapter.read_file(&config_path)?)?;
     let mut config = parse_configuration_from_kdl(config_path.as_ref(), &config_string)?;
-    expand_configuration_template_expressions(&mut config, adapter.get_platform())?;
+    expand_configuration_template_expressions(&mut config, adapter)?;
     Ok(config)
 }
 
