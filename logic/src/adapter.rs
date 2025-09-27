@@ -3,6 +3,7 @@ use crate::types::{Env, FilePath};
 use std::fmt::Debug;
 use std::io::{Read, Seek, Write};
 use std::rc::Rc;
+use std::time::Duration;
 use tool_tool_base::result::ToolToolResult;
 
 pub trait ReadSeek: Read + Seek + 'static {}
@@ -76,6 +77,13 @@ pub trait Adapter: Debug + 'static {
     Create a random, unique string
     */
     fn random_string(&self) -> ToolToolResult<String>;
+
+    /**
+    Get a timestamp for measuring execution time
+    Note that this is a _duration_ measuring the time elapsed since some arbitrary point in the past
+    This is because there's no good way to create an _Instant_ in a platform-agnostic way
+    */
+    fn now(&self) -> ToolToolResult<Duration>;
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;

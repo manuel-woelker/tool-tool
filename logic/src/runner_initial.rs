@@ -255,6 +255,7 @@ mod tests {
     use crate::test_util::targz_builder::TarGzBuilder;
     use crate::test_util::zip_builder::ZipBuilder;
     use expect_test::expect;
+    use std::time::Duration;
     use tool_tool_base::result::ToolToolResult;
 
     fn setup() -> (ToolToolRunnerInitial, MockAdapter) {
@@ -710,6 +711,29 @@ mod tests {
             	ARG: Hello Windows World!
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
+        "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn run_command_long() -> ToolToolResult<()> {
+        let (runner, adapter) = setup_windows();
+        adapter.set_args(&["toolyhi"]);
+        adapter.set_now_increment(Duration::from_millis(3120_234));
+        runner.run();
+        adapter.verify_effects(expect![[r#"
+            READ FILE: .tool-tool/tool-tool.v2.kdl
+            READ FILE: .tool-tool/v2/checksums.kdl
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            	ARG: Hello Windows World!
+            	ENV: FROBNIZZ=nizzle
+            	ENV: FIZZ=buzz
+            PRINT:
+            	🕑  Command took 3120 seconds
+
         "#]]);
         Ok(())
     }

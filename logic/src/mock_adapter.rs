@@ -7,6 +7,7 @@ use indent::indent_all_with;
 use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::time::Duration;
 use tool_tool_base::result::{ToolToolResult, err};
 
 #[derive(Clone)]
@@ -23,6 +24,8 @@ struct MockAdapterInner {
     file_map: HashMap<FilePath, Vec<u8>>,
     exit_code: i32,
     next_random_number: u64,
+    now: Duration,
+    now_increment: Duration,
 }
 
 impl MockAdapter {
@@ -64,6 +67,8 @@ impl MockAdapter {
                 effects_string: String::new(),
                 exit_code: 0,
                 next_random_number: 0,
+                now: Duration::from_secs(42),
+                now_increment: Duration::from_secs(0),
             })),
         }
     }
@@ -120,6 +125,10 @@ impl MockAdapter {
 
     pub fn set_exit_code(&self, exit_code: i32) {
         self.write().exit_code = exit_code;
+    }
+
+    pub fn set_now_increment(&self, now_increment: Duration) {
+        self.write().now_increment = now_increment;
     }
 
     #[allow(dead_code)]
@@ -216,6 +225,13 @@ impl Adapter for MockAdapter {
         let random_number = guard.next_random_number;
         guard.next_random_number += 1;
         Ok(format!("rand-{random_number}"))
+    }
+
+    fn now(&self) -> ToolToolResult<Duration> {
+        let old_now = self.read().now;
+        let new_now = old_now + self.read().now_increment;
+        self.write().now = new_now;
+        Ok(old_now)
     }
 }
 

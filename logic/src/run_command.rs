@@ -2,6 +2,7 @@ use crate::adapter::ExecutionRequest;
 use crate::configuration::find_command;
 use crate::workspace::Workspace;
 use shellish_parse::ParseOptions;
+use std::time::Duration;
 use tool_tool_base::result::{Context, ToolToolResult, bail};
 
 pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
@@ -56,11 +57,20 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut args = parsed_command;
     args.extend(command_args);
     let env = tool_config.env.clone();
+    let start_time = workspace.adapter().now()?;
     let exit_code = workspace.adapter().execute(ExecutionRequest {
         binary_path: binary_path.clone(),
         args: args.clone(),
         env: env.clone(),
     })?;
+    let end_time = workspace.adapter().now()?;
+    let duration = end_time - start_time;
+    if duration > Duration::from_secs(4) {
+        workspace.adapter().print(&format!(
+            "🕑  Command took {} seconds\n",
+            duration.as_secs()
+        ));
+    }
     if exit_code != 0 {
         workspace.adapter().print(&format!(
             "❗ Command '{command_name}' failed with exit code {exit_code}"

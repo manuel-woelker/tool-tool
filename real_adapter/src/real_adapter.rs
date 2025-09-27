@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{Duration, Instant};
 use tool_tool_base::result::{Context, ToolToolResult};
 use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
@@ -15,6 +16,7 @@ use tool_tool_logic::types::{EnvPair, FilePath};
 pub struct RealAdapter {
     base_path: PathBuf,
     downloader: download::Downloader,
+    reference_instant: Instant,
 }
 
 impl RealAdapter {
@@ -22,6 +24,7 @@ impl RealAdapter {
         Self {
             base_path,
             downloader: download::Downloader::new(),
+            reference_instant: Instant::now(),
         }
     }
 
@@ -112,6 +115,10 @@ impl Adapter for RealAdapter {
             .map(char::from)
             .collect();
         Ok(random_string)
+    }
+
+    fn now(&self) -> ToolToolResult<Duration> {
+        Ok(self.reference_instant.elapsed())
     }
 }
 
