@@ -82,7 +82,7 @@ jobs:
       - name: Run tests
         run: cargo test --all-features --locked
       - name: Build release binary
-        run: scripts/build-release.sh
+        run: ./scripts/build_release.sh
   format:
     runs-on: ubuntu-24.04
     steps:
