@@ -9,4 +9,4 @@ export TOOL_TOOL_REVISION=$(./scripts/revision.sh)
 
 cargo build --release
 
-ls -lah target/release/tool-tool.exe
+ls -lah target/release/tool-tool.*
