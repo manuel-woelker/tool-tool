@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2024"
 
 [dependencies]
-tool-tool-base = {path = "../base"}
+tool-tool-base = {path = "../base", version = "0.2.0"}
 
 tracing = { workspace = true }
 relative-path = "2.0.1"

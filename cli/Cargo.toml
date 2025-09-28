@@ -5,9 +5,9 @@ edition = "2024"
 rust-version = "1.86.0"
 
 [dependencies]
-tool-tool-base = {path = "../base"}
-tool-tool-logic = {path = "../logic"}
-tool-tool-real_adapter = {path = "../real_adapter"}
+tool-tool-base = {path = "../base", version = "0.2.0"}
+tool-tool-logic = {path = "../logic", version = "0.2.0"}
+tool-tool-real_adapter = {path = "../real_adapter", version = "0.2.0"}
 
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
