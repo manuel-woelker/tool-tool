@@ -14,4 +14,4 @@ git commit -a -m "chore(release): Release v$VERSION"
 echo VERSION: $VERSION
 git tag -a v$VERSION -m "Release v$VERSION"
 git push origin v$VERSION
-cargo publish --workspace --all-features
+#cargo publish --workspace --all-features
