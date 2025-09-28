@@ -8,7 +8,8 @@ cd $ROOT_DIR
 
 #cargo release -v --workspace --tag-prefix v --all-features $LEVEL
 #cargo publish --workspace --all-features
-cargo set-version --bump minor
+export LEVEL=${1:-minor}
+cargo set-version --bump $LEVEL
 VERSION=$(cargo pkgid --manifest-path cli/Cargo.toml | cut -d "@" -f2)
 git commit -a -m "chore(release): Release v$VERSION"
 echo VERSION: $VERSION
