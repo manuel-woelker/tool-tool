@@ -2,7 +2,7 @@ name: Release Build
 
 on:
   release:
-    types: [created]  # Only runs when a new release is published
+    types: [published]  # Only runs when a new release is published
 
 env:
   CARGO_TERM_COLOR: always
