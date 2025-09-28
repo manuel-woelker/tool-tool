@@ -1,10 +1,10 @@
 [package]
 name = "tool-tool-logic"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 
 [dependencies]
-tool-tool-base = {path = "../base", version = "0.2.2" }
+tool-tool-base = {path = "../base", version = "0.2.3" }
 
 tracing = { workspace = true }
 relative-path = "2.0.1"
