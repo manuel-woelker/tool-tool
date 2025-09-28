@@ -1,13 +1,13 @@
 [package]
 name = "tool-tool"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 rust-version = "1.86.0"
 
 [dependencies]
-tool-tool-base = {path = "../base", version = "0.2.3" }
-tool-tool-logic = {path = "../logic", version = "0.2.3" }
-tool-tool-real_adapter = {path = "../real_adapter", version = "0.2.3" }
+tool-tool-base = {path = "../base", version = "0.2.4" }
+tool-tool-logic = {path = "../logic", version = "0.2.4" }
+tool-tool-real_adapter = {path = "../real_adapter", version = "0.2.4" }
 
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
