@@ -1,5 +1,6 @@
 use crate::adapter::ExecutionRequest;
 use crate::configuration::find_command;
+use crate::lock_guard::LockGuard;
 use crate::workspace::Workspace;
 use shellish_parse::ParseOptions;
 use std::time::Duration;
@@ -24,6 +25,7 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
         .join(format!("{}-{}", tool_config.name, tool_config.version));
     let mut binary_path_maybe = None;
     let mut errors = vec![];
+    let lock_guard = LockGuard::new(workspace.adapter())?;
     'extension_loop: for extension in extensions {
         let candidate = tool_path.join(format!("{binary}{extension}"));
         match workspace.adapter().file_exists(&candidate) {
@@ -37,6 +39,7 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
             }
         }
     }
+    drop(lock_guard);
     let Some(binary_path) = binary_path_maybe else {
         if errors.is_empty() {
             bail!(

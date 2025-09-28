@@ -69,6 +69,7 @@ pub fn save_checksums(workspace: &Workspace) -> ToolToolResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::adapter::Adapter;
     use crate::configuration::{CHECKSUM_FILE_NAME, TOOL_TOOL_DIRECTORY};
     use crate::mock_adapter::MockAdapter;
     use crate::runner_initial::load_config;
@@ -78,6 +79,7 @@ mod tests {
     #[test]
     fn test_load_checksums_no_file() -> ToolToolResult<()> {
         let adapter = MockAdapter::new();
+        adapter.try_lock()?;
         let config = load_config(&adapter)?;
 
         let mut workspace = Workspace::new(config, Rc::new(adapter));
@@ -94,6 +96,7 @@ mod tests {
     #[test]
     fn test_load_checksums() -> ToolToolResult<()> {
         let adapter = MockAdapter::new();
+        adapter.try_lock()?;
         adapter.set_file(
             &format!("{TOOL_TOOL_DIRECTORY}/{CHECKSUM_FILE_NAME}"),
             r#"

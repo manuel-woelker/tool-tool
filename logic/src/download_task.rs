@@ -74,20 +74,19 @@ fn download_tool(
         })?;
     // Determine if tool is already downloaded
     let checksum_path = tool_path.join(".tool-tool.sha512");
-    if let Some(expected_sha512) = sha512sums.get(&download_artifact.url) {
-        if adapter.file_exists(&checksum_path)? {
-            let mut checksum_file = adapter.read_file(&checksum_path)?;
-            let mut checksum = String::new();
-            checksum_file.read_to_string(&mut checksum)?;
-            if checksum != *expected_sha512 {
-                info!("Checksum mismatch for tool '{}', re-downloading", tool.name);
-            } else {
-                info!("Checksum match for tool '{}', skipping download", tool.name);
-                return Ok(());
-            }
+    if let Some(expected_sha512) = sha512sums.get(&download_artifact.url)
+        && adapter.file_exists(&checksum_path)?
+    {
+        let mut checksum_file = adapter.read_file(&checksum_path)?;
+        let mut checksum = String::new();
+        checksum_file.read_to_string(&mut checksum)?;
+        if checksum != *expected_sha512 {
+            info!("Checksum mismatch for tool '{}', re-downloading", tool.name);
+        } else {
+            info!("Checksum match for tool '{}', skipping download", tool.name);
+            return Ok(());
         }
     }
-    // TODO: make random temp dir
     let temp_dir = workspace.create_temp_dir(&tool.name)?;
     if adapter.file_exists(&temp_dir)? {
         adapter.delete_directory_all(&temp_dir)?;

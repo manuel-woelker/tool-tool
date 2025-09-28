@@ -1,14 +1,15 @@
 use crate::download;
 use rand::Rng;
 use rand::distr::Alphanumeric;
+use std::cell::RefCell;
 use std::env;
 use std::fmt::Debug;
-use std::fs::File;
+use std::fs::{File, TryLockError};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
-use tool_tool_base::result::{Context, ToolToolResult};
+use tool_tool_base::result::{Context, ToolToolResult, bail, err};
 use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::{EnvPair, FilePath};
@@ -17,19 +18,30 @@ pub struct RealAdapter {
     base_path: PathBuf,
     downloader: download::Downloader,
     reference_instant: Instant,
+    lockfile_path: PathBuf,
+    lockfile: RefCell<Option<File>>,
 }
 
 impl RealAdapter {
     pub fn new(base_path: PathBuf) -> Self {
         Self {
+            lockfile_path: base_path.join(".tool-tool/v2/cache/lockfile").to_path_buf(),
             base_path,
             downloader: download::Downloader::new(),
             reference_instant: Instant::now(),
+            lockfile: Default::default(),
         }
     }
 
     fn resolve_path(&self, path: &FilePath) -> ToolToolResult<PathBuf> {
         Ok(path.to_path(&self.base_path))
+    }
+
+    fn assert_locked(&self) -> ToolToolResult<()> {
+        if self.lockfile.borrow().is_none() {
+            bail!("Inconsistent internal state: lockfile is not locked")
+        }
+        Ok(())
     }
 }
 
@@ -47,11 +59,13 @@ impl Adapter for RealAdapter {
     }
 
     fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool> {
+        self.assert_locked()?;
         let physical_path = self.resolve_path(path)?;
         Ok(physical_path.exists())
     }
 
     fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
+        self.assert_locked()?;
         let physical_path = self.resolve_path(path)?;
         Ok(Box::new(File::open(&physical_path).with_context(|| {
             format!("Failed to read file {physical_path:?}")
@@ -59,6 +73,7 @@ impl Adapter for RealAdapter {
     }
 
     fn create_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Write>> {
+        self.assert_locked()?;
         let physical_path = self.resolve_path(path)?;
         Ok(Box::new(File::create(&physical_path).with_context(
             || format!("Failed to create file {physical_path:?}"),
@@ -66,11 +81,13 @@ impl Adapter for RealAdapter {
     }
 
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked()?;
         std::fs::create_dir_all(self.resolve_path(path)?)?;
         Ok(())
     }
 
     fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked()?;
         std::fs::remove_dir_all(self.resolve_path(path)?)
             .with_context(|| format!("Failed to delete directory {path:?}"))?;
         Ok(())
@@ -81,6 +98,7 @@ impl Adapter for RealAdapter {
     }
 
     fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked()?;
         self.downloader
             .download(url, &self.resolve_path(destination_path)?)?;
         Ok(())
@@ -120,11 +138,60 @@ impl Adapter for RealAdapter {
     fn now(&self) -> ToolToolResult<Duration> {
         Ok(self.reference_instant.elapsed())
     }
+
+    fn try_lock(&self) -> ToolToolResult<bool> {
+        if self.lockfile.borrow().is_some() {
+            bail!("Lock already held");
+        }
+        let parent_path = self.lockfile_path.parent().ok_or_else(|| {
+            err!(
+                "Could not acquire lockfile parent path: {:?}",
+                self.lockfile_path
+            )
+        })?;
+        std::fs::create_dir_all(parent_path)?;
+        let lockfile = File::create(&self.lockfile_path)?;
+        let lock_result = lockfile.try_lock();
+        match lock_result {
+            Ok(_) => {
+                *self.lockfile.borrow_mut() = Some(lockfile);
+                Ok(true)
+            }
+            Err(TryLockError::WouldBlock) => Ok(false),
+            Err(io_error) => Err(io_error).with_context(|| {
+                format!(
+                    "Unable to acquire lock on lockfile {:?}",
+                    self.lockfile_path
+                )
+            })?,
+        }
+    }
+
+    fn unlock(&self) -> ToolToolResult<()> {
+        let Some(lockfile) = self.lockfile.take() else {
+            bail!("Lock not held");
+        };
+        lockfile.unlock()?;
+        Ok(())
+    }
+
+    fn sleep(&self, duration: Duration) {
+        std::thread::sleep(duration);
+    }
 }
 
 impl Debug for RealAdapter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "RealAdapter")
+    }
+}
+
+impl Drop for RealAdapter {
+    fn drop(&mut self) {
+        let lockfile = self.lockfile.take();
+        if let Some(lockfile) = lockfile {
+            lockfile.unlock().unwrap();
+        }
     }
 }
 
@@ -151,16 +218,25 @@ mod tests {
                 .body(content);
         });
         let adapter = RealAdapter::new(temp_dir.as_path_untracked().to_path_buf());
+        adapter.try_lock().unwrap();
         TestContext { temp_dir, adapter }
     }
 
     fn create_adapter_in_current_directory() -> RealAdapter {
-        RealAdapter::new(PathBuf::from("."))
+        let adapter = RealAdapter::new(PathBuf::from("."));
+        assert!(
+            adapter.try_lock().unwrap(),
+            "Could not acquire lock on lockfile"
+        );
+        adapter
     }
 
     #[test]
     fn test_file_exists() {
-        let adapter = create_adapter_in_current_directory();
+        let context = setup();
+        let adapter = &context.adapter;
+        let file_path = "Cargo.toml";
+        File::create(context.temp_dir.as_path_untracked().join(file_path)).unwrap();
         assert!(adapter.file_exists(&FilePath::from("Cargo.toml")).unwrap());
         assert!(
             !adapter
@@ -233,8 +309,8 @@ mod tests {
 
     #[test]
     fn random_string() {
-        let adapter = create_adapter_in_current_directory();
-        let random_string = adapter.random_string().unwrap();
+        let context = setup();
+        let random_string = context.adapter.random_string().unwrap();
         assert_eq!(random_string.len(), 16);
     }
 }

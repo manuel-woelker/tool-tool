@@ -84,6 +84,21 @@ pub trait Adapter: Debug + 'static {
     This is because there's no good way to create an _Instant_ in a platform-agnostic way
     */
     fn now(&self) -> ToolToolResult<Duration>;
+
+    /**
+    Try to acquire an exclusive lock on the lockfile
+    */
+    fn try_lock(&self) -> ToolToolResult<bool>;
+
+    /**
+    Release the lock on the lockfile
+    */
+    fn unlock(&self) -> ToolToolResult<()>;
+
+    /**
+    Sleep for the given duration
+    */
+    fn sleep(&self, duration: Duration);
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;

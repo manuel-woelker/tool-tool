@@ -5,6 +5,7 @@ mod download_task;
 pub mod file_type;
 pub mod hash;
 pub mod help;
+pub mod lock_guard;
 #[cfg(test)]
 pub(crate) mod mock_adapter;
 pub mod run_command;

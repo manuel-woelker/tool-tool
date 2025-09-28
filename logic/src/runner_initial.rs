@@ -5,6 +5,7 @@ use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::download_task::run_download_task;
 use crate::help::{generate_available_commands_message, print_help};
+use crate::lock_guard::LockGuard;
 use crate::run_command::run_command;
 use crate::types::FilePath;
 use crate::version::get_version;
@@ -127,8 +128,10 @@ impl ToolToolRunnerInitial {
     }
 
     fn run_command(&self) -> ToolToolResult<()> {
+        let lock_guard = LockGuard::new(self.adapter.as_ref());
         let mut workspace = self.create_workspace()?;
         run_download_task(&mut workspace)?;
+        drop(lock_guard);
         run_command(&mut workspace)
     }
 
@@ -138,9 +141,11 @@ impl ToolToolRunnerInitial {
     }
 
     fn print_available_commands(&self) {
+        let lock_guard = LockGuard::new(self.adapter.as_ref());
         let Ok(config) = self.load_config() else {
             return;
         };
+        drop(lock_guard);
         let Some(message) = generate_available_commands_message(&config) else {
             return;
         };
@@ -148,13 +153,17 @@ impl ToolToolRunnerInitial {
     }
 
     fn validate_config(&self) -> ToolToolResult<()> {
+        let lock_guard = LockGuard::new(self.adapter.as_ref());
         self.load_config()
             .context("Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'")?;
+        drop(lock_guard);
         Ok(())
     }
 
     fn expand_config(&self) -> ToolToolResult<()> {
+        let lock_guard = LockGuard::new(self.adapter.as_ref());
         let config = self.load_config()?;
+        drop(lock_guard);
         let mut output = String::new();
         output.push_str("Expanded tool-tool configuration:\n");
 
@@ -213,7 +222,10 @@ impl ToolToolRunnerInitial {
     }
 
     fn download(&self) -> ToolToolResult<()> {
-        run_download_task(&mut self.create_workspace()?)
+        let lock_guard = LockGuard::new(self.adapter.as_ref());
+        run_download_task(&mut self.create_workspace()?)?;
+        drop(lock_guard);
+        Ok(())
     }
 
     fn create_workspace(&self) -> ToolToolResult<Workspace> {
@@ -349,7 +361,9 @@ mod tests {
             	    directory. This file should contain the tool configuration in KDL format.
 
             	For more information, please refer to the documentation.
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
+            UNLOCK
             PRINT:
 
             	The following commands are available: 
@@ -398,7 +412,9 @@ mod tests {
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
+            UNLOCK
         "#]]);
         Ok(())
     }
@@ -410,6 +426,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             RANDOM STRING
@@ -445,6 +462,7 @@ mod tests {
             "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
+            UNLOCK
         "#]]);
         Ok(())
     }
@@ -456,6 +474,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             RANDOM STRING
@@ -491,14 +510,17 @@ mod tests {
             "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
+            UNLOCK
         "#]]);
         // Second time through, ensure we don't download again
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            UNLOCK
         "#]]);
         Ok(())
     }
@@ -516,6 +538,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
@@ -527,6 +550,7 @@ mod tests {
             CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
+            UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
             	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
@@ -550,6 +574,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
@@ -561,6 +586,7 @@ mod tests {
             CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
+            UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
             	Expected: wrong_checksum
@@ -585,6 +611,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
@@ -596,6 +623,7 @@ mod tests {
             CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
+            UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Checksum mismatch for tool 'lsd'
             	Expected: fb7ad071d9053181b7ed676b14addd802008a0d2b0fa5aab930c4394a31b9686641d9bcc76432891a2611688c5f1504d85ae74c6a510db7e3595f58c5ff98e49
@@ -613,6 +641,7 @@ mod tests {
         adapter.set_args(&["--download"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             RANDOM STRING
@@ -648,6 +677,7 @@ mod tests {
             "https://example.com/test-1.2.3.zip" "5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394"
             }
 
+            UNLOCK
         "#]]);
         Ok(())
     }
@@ -658,7 +688,9 @@ mod tests {
         adapter.set_args(&["--commands"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
+            UNLOCK
             PRINT:
 
             	The following commands are available: 
@@ -678,13 +710,17 @@ mod tests {
         adapter.set_args(&["bar"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            UNLOCK
+            TRY LOCK
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.exe
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.bat
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.cmd
+            UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to execute command 'bar'
             	  Chain of causes:
@@ -702,11 +738,15 @@ mod tests {
         adapter.set_args(&["toolyhi"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            UNLOCK
+            TRY LOCK
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
             	ARG: Hello Windows World!
             	ENV: FROBNIZZ=nizzle
@@ -722,11 +762,15 @@ mod tests {
         adapter.set_now_increment(Duration::from_millis(3120_234));
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            UNLOCK
+            TRY LOCK
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
             	ARG: Hello Windows World!
             	ENV: FROBNIZZ=nizzle
@@ -744,11 +788,15 @@ mod tests {
         adapter.set_args(&["toolyhi", "there", "what is this?\""]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            UNLOCK
+            TRY LOCK
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
             	ARG: Hello Windows World!
             	ARG: there
@@ -767,11 +815,15 @@ mod tests {
         adapter.set_exit_code(19);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
             READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            UNLOCK
+            TRY LOCK
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
@@ -795,7 +847,9 @@ mod tests {
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
+            UNLOCK
             PRINT:
             	Expanded tool-tool configuration:
             		lsd 1.2.3:
@@ -829,7 +883,9 @@ mod tests {
         adapter.set_args(&["--expand-config"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
+            UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to parse KDL file '.tool-tool/tool-tool.v2.kdl'
             	  Chain of causes:
@@ -858,7 +914,9 @@ mod tests {
         adapter.set_args(&["--validate"]);
         runner.run();
         adapter.verify_effects(expect![[r#"
+            TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
+            UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to validate tool-tool configuration file '.tool-tool.v2.kdl'
             	  Chain of causes:

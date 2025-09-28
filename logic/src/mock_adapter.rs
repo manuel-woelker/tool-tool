@@ -26,6 +26,8 @@ struct MockAdapterInner {
     next_random_number: u64,
     now: Duration,
     now_increment: Duration,
+    is_locked: bool,
+    lock_results: Vec<bool>,
 }
 
 impl MockAdapter {
@@ -69,6 +71,8 @@ impl MockAdapter {
                 next_random_number: 0,
                 now: Duration::from_secs(42),
                 now_increment: Duration::from_secs(0),
+                lock_results: Vec::new(),
+                is_locked: false,
             })),
         }
     }
@@ -131,6 +135,10 @@ impl MockAdapter {
         self.write().now_increment = now_increment;
     }
 
+    pub fn set_lock_results(&self, lock_results: Vec<bool>) {
+        self.write().lock_results = lock_results;
+    }
+
     #[allow(dead_code)]
     pub fn get_effects(&self) -> String {
         self.read().effects_string.clone()
@@ -138,6 +146,14 @@ impl MockAdapter {
 
     pub fn clear_effects(&self) {
         self.write().effects_string.clear();
+    }
+
+    pub fn assert_locked(&self) {
+        assert!(self.read().is_locked, "Lock not held");
+    }
+
+    pub fn assert_unlocked(&self) {
+        assert!(!self.read().is_locked, "Lock already held");
     }
 }
 
@@ -155,11 +171,13 @@ impl Adapter for MockAdapter {
     }
 
     fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool> {
+        self.assert_locked();
         self.log_effect(format!("FILE EXISTS?: {}", path));
         Ok(self.read().file_map.contains_key(path))
     }
 
     fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
+        self.assert_locked();
         self.log_effect(format!("READ FILE: {path}"));
         Ok(Box::new(Cursor::new(
             self.read()
@@ -171,16 +189,19 @@ impl Adapter for MockAdapter {
     }
 
     fn create_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn Write>> {
+        self.assert_locked();
         self.log_effect(format!("CREATE FILE: {path}"));
         Ok(Box::new(MockFile::new(path, self.clone())))
     }
 
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked();
         self.log_effect(format!("CREATE DIR: {path}"));
         Ok(())
     }
 
     fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked();
         self.log_effect(format!("DELETE DIR: {path}"));
         self.write().file_map.retain(|k, _v| !k.starts_with(path));
         Ok(())
@@ -191,6 +212,7 @@ impl Adapter for MockAdapter {
     }
 
     fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked();
         self.log_effect(format!("DOWNLOAD: {url} -> {destination_path}"));
         let content = self
             .read()
@@ -232,6 +254,24 @@ impl Adapter for MockAdapter {
         let new_now = old_now + self.read().now_increment;
         self.write().now = new_now;
         Ok(old_now)
+    }
+
+    fn try_lock(&self) -> ToolToolResult<bool> {
+        self.assert_unlocked();
+        self.log_effect("TRY LOCK");
+        let result = self.write().lock_results.pop().unwrap_or(true);
+        self.write().is_locked = result;
+        Ok(result)
+    }
+
+    fn unlock(&self) -> ToolToolResult<()> {
+        self.log_effect("UNLOCK");
+        self.write().is_locked = false;
+        Ok(())
+    }
+
+    fn sleep(&self, duration: Duration) {
+        self.log_effect(format!("SLEEP: {:?}", duration));
     }
 }
 
