@@ -1,10 +1,13 @@
 use crate::adapter::ExecutionRequest;
 use crate::configuration::find_command;
+use crate::configuration::platform::DownloadPlatform;
 use crate::lock_guard::LockGuard;
+use crate::types::EnvPair;
 use crate::workspace::Workspace;
 use shellish_parse::ParseOptions;
 use std::time::Duration;
 use tool_tool_base::result::{Context, ToolToolResult, bail};
+use tracing::warn;
 
 pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut command_args = workspace.adapter().args();
@@ -57,7 +60,21 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     };
     let mut args = parsed_command;
     args.extend(command_args);
-    let env = tool_config.env.clone();
+    let mut env = tool_config.env.clone();
+    if workspace.adapter().get_platform() == DownloadPlatform::Windows {
+        let inherited_env_vars = ["SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "TMP", "WINDIR", "OS"];
+        for env_name in inherited_env_vars {
+            let host_env = workspace.adapter().env();
+            let system_root = host_env.iter().find(|(name, _)| name == env_name);
+            if let Some((_, system_root)) = system_root {
+                env.push(EnvPair::new(env_name.into(), system_root.to_string()));
+            } else {
+                warn!(
+                    "Could not inherit environment variable '{env_name}'. Networking may not work."
+                );
+            }
+        }
+    }
     let start_time = workspace.adapter().now()?;
     let exit_code = workspace.adapter().execute(ExecutionRequest {
         binary_path: binary_path.clone(),

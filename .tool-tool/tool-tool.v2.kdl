@@ -17,6 +17,9 @@ tools {
 		}
 		commands {
 			node "node"
+			npm "npm"
+			npm "npm"
+			npx "npx"
 		}
 		env {
 			foo "bar"
@@ -31,6 +34,14 @@ tools {
 			lua "lua"
 			luav "lua -v"
 			luax #"lua -e "print('Hello World!')""#
+		}
+	}
+	bun "1.2.21" {
+		download {
+			windows "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-windows-x64-baseline.zip"
+		}
+		commands {
+			bun "bun"
 		}
 	}
 }

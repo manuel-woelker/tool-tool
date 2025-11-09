@@ -2,5 +2,6 @@ sha512sums{
 "https://github.com/DevelopersCommunity/cmake-lua/releases/download/v5.4.6/Lua-5.4.6-win64.zip" "8a8eb1130f3d7e9ae7099153d6ef327dddbe53f5dd3e11598202918c251441a02423e464a833e5ea93fc9c30ec57dc94262d3117907a1204a85ca1afaba0a7c8"
 "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip" baa1a3fc26533eb1578adee93b38044fb06e273ed90d23e52b686b9af59792440fc18ba3334d9050dfb07a223744cfa156747dbaef74b65349b806ffa739070e
 "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz" "90c2640cbd02c76c9171ab6d758e72287b9af2fe2a638cdb72f841c623fd0011bb03d6ee3e4182b9419ed47baf5e3fc4bd0031d478899be1592f2ebd57ac5b5e"
+"https://github.com/oven-sh/bun/releases/download/bun-v1.2.21/bun-windows-x64-baseline.zip" "1476c47797da780420c83badd18a51818fe7ac2ac84ad4e455d39156ff5f08ccd92f26258a679b80546741baf00ebfed9b98c09eca8600b20759cdde2a764ab5"
 "https://nodejs.org/dist/v22.19.0/node-v22.19.0-win-x64.zip" c9b4be5389ed16063cb4760ea8213857c6fd8d3fa276b2377a219cfca35c5c2a9d302222d4dfb5a73be653d864fb5768b7be410e21dab858d0df9dd0a416b18e
 }

@@ -4,13 +4,28 @@ set -euo pipefail
 
 export RUSTFLAGS='-D warnings'
 
+# Capture the list of staged files (only files added/modified)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=AM)
+
 echo "Checking rust format"
 cargo fmt
+
+# Now check which of those staged files actually changed
+CHANGED_FILES=$(git diff --name-only)
+
+# Re-add only files that were modified by the formatter
+for file in $CHANGED_FILES; do
+  # Only re-add if the file was in the original staged list
+  if echo "$STAGED_FILES" | grep -qx "$file"; then
+    git add "$file"
+  fi
+done
+
+echo "Reformatted files:"
+echo "$CHANGED_FILES"
 
 echo "Running clippy checks"
 cargo clippy -- -D warnings
 
 echo "Running tests"
 cargo test
-
-git add .
