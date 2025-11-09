@@ -2345,7 +2345,7 @@ dependencies = [
 
 [[package]]
 name = "tool-tool"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "enable-ansi-support",
  "tool-tool-base",
@@ -2357,7 +2357,7 @@ dependencies = [
 
 [[package]]
 name = "tool-tool-base"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "miette",
@@ -2366,7 +2366,7 @@ dependencies = [
 
 [[package]]
 name = "tool-tool-logic"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "expect-test",
  "flate2",
@@ -2384,7 +2384,7 @@ dependencies = [
 
 [[package]]
 name = "tool-tool-real_adapter"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "assertables",
  "httpmock",
