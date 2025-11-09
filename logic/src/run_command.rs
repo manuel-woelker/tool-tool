@@ -20,9 +20,7 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut parsed_command =
         shellish_parse::parse(&command_config.command_string, ParseOptions::new())?;
     let binary = parsed_command.remove(0);
-    let tool_path = workspace
-        .cache_dir()
-        .join(format!("{}-{}", tool_config.name, tool_config.version));
+    let tool_path = workspace.tool_dir(tool_config);
     let mut binary_path_maybe = None;
     let mut errors = vec![];
     let lock_guard = LockGuard::new(workspace.adapter())?;

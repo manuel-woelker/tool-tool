@@ -433,24 +433,24 @@ mod tests {
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo -> bar
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz -> bizz
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
@@ -481,24 +481,24 @@ mod tests {
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo -> bar
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz -> bizz
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
@@ -518,8 +518,8 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             UNLOCK
         "#]]);
         Ok(())
@@ -541,13 +541,13 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             UNLOCK
@@ -577,13 +577,13 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             UNLOCK
@@ -614,13 +614,13 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             UNLOCK
@@ -648,24 +648,24 @@ mod tests {
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             FILE EXISTS?: .tool-tool/v2/cache/tmp/lsd-rand-0
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-linux
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3
+            DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/fizz/buzz -> bizz
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/foo
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/foo -> bar
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/tooly.exe
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux/fizz
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/fizz/buzz
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/fizz/buzz -> bizz
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512 -> e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/.tool-tool.sha512 -> e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
             RANDOM STRING
             CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-windows
@@ -713,18 +713,18 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             UNLOCK
             TRY LOCK
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.exe
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.bat
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/fizz.cmd
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz.exe
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz.bat
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz.cmd
             UNLOCK
             PRINT:
             	ERROR running tool-tool (vTEST): Failed to execute command 'bar'
             	  Chain of causes:
-            	   0: Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/cache/lsd-1.2.3/fizz(.exe|.bat|.cmd)
+            	   0: Failed to find binary for command 'bar' in tool lsd, found no matching executable binaries: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz(.exe|.bat|.cmd)
 
 
             EXIT: 1
@@ -741,13 +741,13 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             UNLOCK
             TRY LOCK
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             UNLOCK
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             	ARG: Hello Windows World!
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
@@ -765,13 +765,13 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             UNLOCK
             TRY LOCK
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             UNLOCK
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             	ARG: Hello Windows World!
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
@@ -791,13 +791,13 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             UNLOCK
             TRY LOCK
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             UNLOCK
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             	ARG: Hello Windows World!
             	ARG: there
             	ARG: what is this?"
@@ -818,19 +818,19 @@ mod tests {
             TRY LOCK
             READ FILE: .tool-tool/tool-tool.v2.kdl
             READ FILE: .tool-tool/v2/checksums.kdl
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
-            READ FILE: .tool-tool/v2/cache/lsd-1.2.3/.tool-tool.sha512
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
+            READ FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
             UNLOCK
             TRY LOCK
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             UNLOCK
-            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe
+            EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
             PRINT:
             	❗ Command 'tooly' failed with exit code 19
             PRINT:
-            		Executed command was: .tool-tool/v2/cache/lsd-1.2.3/tooly.exe 
+            		Executed command was: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe 
             PRINT:
             		Environment:
             PRINT:

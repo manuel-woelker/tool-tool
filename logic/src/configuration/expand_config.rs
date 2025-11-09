@@ -45,8 +45,10 @@ fn create_expander<'a>(
             .find(|tool| tool.name == *tool_name)
             .ok_or_else(|| err!("Could not find tool '{tool_name}'"))?;
         Ok(format!(
-            ".tool-tool/v2/cache/{}-{}",
-            tool.name, tool.version
+            ".tool-tool/v2/cache/{}-{}-{}",
+            tool.name,
+            tool.version,
+            adapter.get_platform()
         ))
     });
     let host_platform = adapter.get_platform();
@@ -153,17 +155,17 @@ mod tests {
                         commands: [
                             Command {
                                 name: "lsd",
-                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3",
+                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3-linux",
                                 description: "",
                             },
                             Command {
                                 name: "take2",
-                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3 one two",
+                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3-linux one two",
                                 description: "",
                             },
                             Command {
                                 name: "take1",
-                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3 one",
+                                command_string: "bin/lsd .tool-tool/v2/cache/foo-1.2.3-linux one",
                                 description: "",
                             },
                         ],
