@@ -60,8 +60,9 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     };
     let mut args = parsed_command;
     args.extend(command_args);
-    let mut env = tool_config.env.clone();
+    let mut env = Vec::new();
     if workspace.adapter().get_platform() == DownloadPlatform::Windows {
+        env.push(EnvPair::new("PATHEXT".into(), ".COM;.EXE;.BAT;.CMD".into()));
         let inherited_env_vars = ["SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "TMP", "WINDIR", "OS"];
         for env_name in inherited_env_vars {
             let host_env = workspace.adapter().env();
@@ -75,6 +76,8 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
             }
         }
     }
+    env.extend_from_slice(&tool_config.env);
+
     let start_time = workspace.adapter().now()?;
     let exit_code = workspace.adapter().execute(ExecutionRequest {
         binary_path: binary_path.clone(),

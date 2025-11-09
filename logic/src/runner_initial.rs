@@ -287,6 +287,13 @@ mod tests {
     fn setup_windows() -> (ToolToolRunnerInitial, MockAdapter) {
         let (runner, adapter) = setup();
         adapter.set_platform(DownloadPlatform::Windows);
+        adapter.add_env("OS", "~os~");
+        adapter.add_env("SYSTEMDRIVE", "~systemdrive~");
+        adapter.add_env("SYSTEMROOT", "~systemroot~");
+        adapter.add_env("TEMP", "~temp~");
+        adapter.add_env("TMP", "~tmp~");
+        adapter.add_env("WINDIR", "~windir~");
+        adapter.add_env("NOT_INHERITED", "~not inherited~");
         runner.download().unwrap();
         adapter.clear_effects();
         (runner, adapter)
@@ -749,6 +756,13 @@ mod tests {
             UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             	ARG: Hello Windows World!
+            	ENV: PATHEXT=.COM;.EXE;.BAT;.CMD
+            	ENV: SYSTEMDRIVE=~systemdrive~
+            	ENV: SYSTEMROOT=~systemroot~
+            	ENV: TEMP=~temp~
+            	ENV: TMP=~tmp~
+            	ENV: WINDIR=~windir~
+            	ENV: OS=~os~
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
         "#]]);
@@ -773,6 +787,13 @@ mod tests {
             UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             	ARG: Hello Windows World!
+            	ENV: PATHEXT=.COM;.EXE;.BAT;.CMD
+            	ENV: SYSTEMDRIVE=~systemdrive~
+            	ENV: SYSTEMROOT=~systemroot~
+            	ENV: TEMP=~temp~
+            	ENV: TMP=~tmp~
+            	ENV: WINDIR=~windir~
+            	ENV: OS=~os~
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
             PRINT:
@@ -801,6 +822,13 @@ mod tests {
             	ARG: Hello Windows World!
             	ARG: there
             	ARG: what is this?"
+            	ENV: PATHEXT=.COM;.EXE;.BAT;.CMD
+            	ENV: SYSTEMDRIVE=~systemdrive~
+            	ENV: SYSTEMROOT=~systemroot~
+            	ENV: TEMP=~temp~
+            	ENV: TMP=~tmp~
+            	ENV: WINDIR=~windir~
+            	ENV: OS=~os~
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
         "#]]);
@@ -825,6 +853,13 @@ mod tests {
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
             UNLOCK
             EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
+            	ENV: PATHEXT=.COM;.EXE;.BAT;.CMD
+            	ENV: SYSTEMDRIVE=~systemdrive~
+            	ENV: SYSTEMROOT=~systemroot~
+            	ENV: TEMP=~temp~
+            	ENV: TMP=~tmp~
+            	ENV: WINDIR=~windir~
+            	ENV: OS=~os~
             	ENV: FROBNIZZ=nizzle
             	ENV: FIZZ=buzz
             PRINT:
@@ -833,6 +868,20 @@ mod tests {
             		Executed command was: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe 
             PRINT:
             		Environment:
+            PRINT:
+            			PATHEXT=.COM;.EXE;.BAT;.CMD
+            PRINT:
+            			SYSTEMDRIVE=~systemdrive~
+            PRINT:
+            			SYSTEMROOT=~systemroot~
+            PRINT:
+            			TEMP=~temp~
+            PRINT:
+            			TMP=~tmp~
+            PRINT:
+            			WINDIR=~windir~
+            PRINT:
+            			OS=~os~
             PRINT:
             			FROBNIZZ=nizzle
             PRINT:
