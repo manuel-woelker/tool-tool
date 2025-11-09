@@ -8,6 +8,10 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 
 pub fn run_cli() -> ToolToolResult<()> {
+    if let Err(err) = enable_ansi_support::enable_ansi_support() {
+        eprintln!("Failed to enable ANSI support: {err}");
+    }
+
     let fmt_layer = tracing_subscriber::fmt::layer()
         .with_target(false)
         .with_span_events(FmtSpan::ENTER)

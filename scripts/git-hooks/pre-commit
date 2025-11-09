@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export RUSTFLAGS='-D warnings'
+
+echo "Checking rust format"
+cargo fmt
+
+echo "Running clippy checks"
+cargo clippy -- -D warnings
+
+echo "Running tests"
+cargo test
+
+git add .
