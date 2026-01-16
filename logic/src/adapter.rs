@@ -99,6 +99,11 @@ pub trait Adapter: Debug + 'static {
     Sleep for the given duration
     */
     fn sleep(&self, duration: Duration);
+
+    /**
+    Get the base path of the tool-tool binary
+    */
+    fn get_base_path(&self) -> String;
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;

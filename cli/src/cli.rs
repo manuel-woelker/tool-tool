@@ -1,6 +1,6 @@
-use std::env::current_exe;
+use std::env::current_dir;
 use std::path::PathBuf;
-use tool_tool_base::result::{ToolToolResult, bail, err};
+use tool_tool_base::result::{Context, ToolToolResult, bail};
 use tool_tool_logic::configuration::CONFIGURATION_FILE_NAME;
 use tracing::info;
 use tracing_subscriber::Layer;
@@ -30,29 +30,20 @@ pub fn run_cli() -> ToolToolResult<()> {
 }
 
 fn find_base_path() -> ToolToolResult<PathBuf> {
-    let current_exe = current_exe()?;
-    let mut candidate_path = current_exe.clone();
-    let exe_parent = candidate_path
-        .parent()
-        .ok_or_else(|| {
-            err!(
-                "Could not find parent of tool-tool executable '{:?}'",
-                &current_exe
-            )
-        })?
-        .to_path_buf();
+    let working_directory = current_dir().with_context(|| "Failed to get working directory")?;
+    let mut candidate_path = working_directory.clone();
     loop {
+        let config_path = candidate_path.join(CONFIGURATION_FILE_NAME);
+        if config_path.exists() && config_path.is_file() {
+            return Ok(candidate_path.to_path_buf());
+        }
         let Some(parent_path) = candidate_path.parent() else {
             break;
         };
-        let config_path = parent_path.join(CONFIGURATION_FILE_NAME);
-        if config_path.exists() && config_path.is_file() {
-            return Ok(parent_path.to_path_buf());
-        }
         candidate_path = parent_path.to_path_buf();
     }
     bail!(
-        "Could not find config file '{CONFIGURATION_FILE_NAME}' base path from tool-tool executable '{:?}'",
-        exe_parent
+        "Could not find config file '{CONFIGURATION_FILE_NAME}' base path from working directory '{:?}'",
+        working_directory
     )
 }

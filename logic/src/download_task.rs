@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::io::Read;
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
-use tracing::info;
+use tracing::{debug, info};
 
 type Sha512Sums = BTreeMap<String, String>;
 
@@ -104,6 +104,7 @@ fn download_tool(
     let mut download_file = adapter.read_file(&download_path)?;
     // Compute and verify checksum
     let sha512 = compute_sha512(download_file.as_mut())?;
+    debug!("Checksum for tool '{}': {}", tool.name, sha512);
     if let Some(expected_sha512) = sha512sums.get(&download_artifact.url) {
         if sha512 != *expected_sha512 {
             return Err(err!(
@@ -124,7 +125,8 @@ fn download_tool(
     adapter.delete_directory_all(&tool_path)?;
     // get file type
     let file_type = get_file_type_from_url(&download_artifact.url);
-    extract_tool(workspace, &tool_path, &download_path, file_type)?;
+    debug!("Extracting tool '{}'", tool.name);
+    extract_tool(workspace, tool, &tool_path, &download_path, file_type)?;
 
     adapter.delete_directory_all(&temp_dir)?;
     // Last step is to create the checksum file
@@ -135,6 +137,7 @@ fn download_tool(
 
 fn extract_tool(
     workspace: &Workspace,
+    tool: &ToolConfiguration,
     tool_path: &RelativePathBuf,
     download_path: &RelativePathBuf,
     file_type: FileType,
@@ -146,8 +149,24 @@ fn extract_tool(
         FileType::TarGz => {
             extract_targz(workspace, download_path, tool_path)?;
         }
-        FileType::Other => {
-            todo!()
+        FileType::Exe => {
+            extract_exe(
+                workspace,
+                download_path,
+                &tool_path.join(format!("{}.exe", tool.name)),
+            )?;
+        }
+        FileType::None => {
+            extract_exe(workspace, download_path, &tool_path.join(&tool.name))?;
+        }
+        FileType::Unknown => {
+            return Err(err!(
+                "Could not determine file type for '{}'",
+                download_path
+            ));
+        }
+        FileType::Other(extension) => {
+            return Err(err!("Unsupported file extension: '{}'", extension));
         }
     }
     Ok(())
@@ -220,5 +239,20 @@ fn extract_targz(
             _ => {}
         }
     }
+    Ok(())
+}
+
+fn extract_exe(
+    workspace: &Workspace,
+    output_directory: &RelativePathBuf,
+    destination_path: &RelativePathBuf,
+) -> ToolToolResult<()> {
+    let adapter = workspace.adapter();
+    if let Some(parent_path) = destination_path.parent() {
+        adapter.create_directory_all(&parent_path.to_relative_path_buf())?;
+    }
+    let mut infile = adapter.read_file(output_directory)?;
+    let mut outfile = adapter.create_file(destination_path)?;
+    std::io::copy(&mut infile, &mut outfile)?;
     Ok(())
 }

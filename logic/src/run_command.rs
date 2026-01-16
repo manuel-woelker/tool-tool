@@ -63,10 +63,20 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
     let mut env = Vec::new();
     if workspace.adapter().get_platform() == DownloadPlatform::Windows {
         env.push(EnvPair::new("PATHEXT".into(), ".COM;.EXE;.BAT;.CMD".into()));
-        let inherited_env_vars = ["SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "TMP", "WINDIR", "OS"];
+        let inherited_env_vars = [
+            "SYSTEMDRIVE",
+            "SYSTEMROOT",
+            "TEMP",
+            "TMP",
+            "WINDIR",
+            "OS",
+            "COMSPEC",
+        ];
         for env_name in inherited_env_vars {
             let host_env = workspace.adapter().env();
-            let system_root = host_env.iter().find(|(name, _)| name == env_name);
+            let system_root = host_env
+                .iter()
+                .find(|(name, _)| name.to_uppercase() == env_name);
             if let Some((_, system_root)) = system_root {
                 env.push(EnvPair::new(env_name.into(), system_root.to_string()));
             } else {
@@ -106,6 +116,7 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
                 .adapter()
                 .print(&format!("\t\t{}={}", env.key, env.value));
         }
+        workspace.adapter().exit(exit_code);
     }
     Ok(())
 }

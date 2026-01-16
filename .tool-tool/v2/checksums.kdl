@@ -3,5 +3,9 @@ sha512sums{
 "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-pc-windows-msvc.zip" baa1a3fc26533eb1578adee93b38044fb06e273ed90d23e52b686b9af59792440fc18ba3334d9050dfb07a223744cfa156747dbaef74b65349b806ffa739070e
 "https://github.com/Peltoche/lsd/releases/download/0.17.0/lsd-0.17.0-x86_64-unknown-linux-gnu.tar.gz" "90c2640cbd02c76c9171ab6d758e72287b9af2fe2a638cdb72f841c623fd0011bb03d6ee3e4182b9419ed47baf5e3fc4bd0031d478899be1592f2ebd57ac5b5e"
 "https://github.com/oven-sh/bun/releases/download/bun-v1.2.21/bun-windows-x64-baseline.zip" "1476c47797da780420c83badd18a51818fe7ac2ac84ad4e455d39156ff5f08ccd92f26258a679b80546741baf00ebfed9b98c09eca8600b20759cdde2a764ab5"
+"https://github.com/pnpm/pnpm/releases/download/v10.28.0/pnpm-linux-x64" "0d5ae1fb4da25dcd9ede9ffcfe7eb05b5d31ccf14e45f47061c128067d95467b012ca5f9bb8885ff7abd6814007cd4f2580ccc7ef0a9eb7af99fa378ddc44582"
+"https://github.com/pnpm/pnpm/releases/download/v10.28.0/pnpm-win-x64.exe" "3b9a57ffca2e3b6a8f2448c54e7327b78f197155585683372233ebea8d211ea68f17978ae53ca3fdafd7c8bc71ad199bb742edb2ea5cdbd5f0b22bf35fc2a20d"
 "https://nodejs.org/dist/v22.19.0/node-v22.19.0-win-x64.zip" c9b4be5389ed16063cb4760ea8213857c6fd8d3fa276b2377a219cfca35c5c2a9d302222d4dfb5a73be653d864fb5768b7be410e21dab858d0df9dd0a416b18e
+"https://nodejs.org/dist/v24.13.0/node-v24.13.0-linux-x64.tar.gz" ff59bbf130f68fbb251e4a0ae0b50cf18c4135f3b8a90ef1f8c0263174128fed88a12d1c32df4c3da9cd4cbc67e430508f8b3d46ea3da69b244405fac5413c26
+"https://nodejs.org/dist/v24.13.0/node-v24.13.0-win-x64.zip" "54650c0d5b556c91e30a22b077f749edd4b13066db63700c2f644bafdafff3ed2c065f1581c831ea5e7ce9b9f0bcc4af64542cb258c3f166c1727b8c3eba2e18"
 }

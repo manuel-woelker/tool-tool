@@ -886,6 +886,7 @@ mod tests {
             			FROBNIZZ=nizzle
             PRINT:
             			FIZZ=buzz
+            EXIT: 19
         "#]]);
         Ok(())
     }

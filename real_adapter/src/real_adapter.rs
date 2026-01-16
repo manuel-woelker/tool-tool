@@ -178,6 +178,10 @@ impl Adapter for RealAdapter {
     fn sleep(&self, duration: Duration) {
         std::thread::sleep(duration);
     }
+
+    fn get_base_path(&self) -> String {
+        self.base_path.to_string_lossy().to_string()
+    }
 }
 
 impl Debug for RealAdapter {

@@ -11,6 +11,7 @@ tools {
 		env {
 		}
 	}
+	/*
 	node "22.19.0" {
 		download {
 			windows "https://nodejs.org/dist/v${version}/node-v${version}-win-x64.zip"
@@ -42,6 +43,30 @@ tools {
 		}
 		commands {
 			bun "bun"
+		}
+	}
+	*/
+	node "24.13.0" {
+		download {
+			windows "https://nodejs.org/dist/v${version}/node-v${version}-win-x64.zip"
+			linux "https://nodejs.org/dist/v${version}/node-v${version}-linux-x64.tar.gz"
+		}
+		commands {
+			node "${linux:bin/}node"
+			npm "${linux:bin/}npm"
+			npx "${linux:bin/}npx"
+		}
+		env {
+			PATH "${dir:node}"
+		}
+	}
+	pnpm "10.28.0" {
+		download {
+			windows "https://github.com/pnpm/pnpm/releases/download/v${version}/pnpm-win-x64.exe"
+			linux "https://github.com/pnpm/pnpm/releases/download/v${version}/pnpm-linux-x64"
+		}
+		commands {
+			pnpm "pnpm"
 		}
 	}
 }

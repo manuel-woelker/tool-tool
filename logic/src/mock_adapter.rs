@@ -273,6 +273,10 @@ impl Adapter for MockAdapter {
     fn sleep(&self, duration: Duration) {
         self.log_effect(format!("SLEEP: {:?}", duration));
     }
+
+    fn get_base_path(&self) -> String {
+        "<base_path>".to_string()
+    }
 }
 
 impl std::fmt::Debug for MockAdapter {
