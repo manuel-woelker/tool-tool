@@ -1,11 +1,11 @@
 [package]
 name = "tool-tool-real_adapter"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2024"
 
 [dependencies]
-tool-tool-base = {path = "../base", version = "0.3.1" }
-tool-tool-logic = {path = "../logic", version = "0.3.1" }
+tool-tool-base = {path = "../base", version = "0.4.0" }
+tool-tool-logic = {path = "../logic", version = "0.4.0" }
 
 ureq = { version = "3.0.12", features = ["platform-verifier"] }
 rand = "0.9.2"
