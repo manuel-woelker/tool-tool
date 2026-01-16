@@ -104,6 +104,11 @@ pub trait Adapter: Debug + 'static {
     Get the base path of the tool-tool binary
     */
     fn get_base_path(&self) -> String;
+
+    /**
+    Make a file executable
+    */
+    fn make_file_executable(&self, path: &FilePath) -> ToolToolResult<()>;
 }
 
 pub type AdapterBox = Rc<dyn Adapter>;

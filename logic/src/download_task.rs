@@ -251,8 +251,11 @@ fn extract_exe(
     if let Some(parent_path) = destination_path.parent() {
         adapter.create_directory_all(&parent_path.to_relative_path_buf())?;
     }
-    let mut infile = adapter.read_file(output_directory)?;
-    let mut outfile = adapter.create_file(destination_path)?;
-    std::io::copy(&mut infile, &mut outfile)?;
+    {
+        let mut infile = adapter.read_file(output_directory)?;
+        let mut outfile = adapter.create_file(destination_path)?;
+        std::io::copy(&mut infile, &mut outfile)?;
+    }
+    adapter.make_file_executable(destination_path)?;
     Ok(())
 }

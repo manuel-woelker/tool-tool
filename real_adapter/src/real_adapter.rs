@@ -182,6 +182,18 @@ impl Adapter for RealAdapter {
     fn get_base_path(&self) -> String {
         self.base_path.to_string_lossy().to_string()
     }
+
+    fn make_file_executable(&self, _path: &FilePath) -> ToolToolResult<()> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(
+                self.resolve_path(_path)?,
+                std::fs::Permissions::from_mode(0o755),
+            )?;
+        }
+        Ok(())
+    }
 }
 
 impl Debug for RealAdapter {

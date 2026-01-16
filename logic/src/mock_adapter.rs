@@ -277,6 +277,11 @@ impl Adapter for MockAdapter {
     fn get_base_path(&self) -> String {
         "<base_path>".to_string()
     }
+
+    fn make_file_executable(&self, path: &FilePath) -> ToolToolResult<()> {
+        self.log_effect(format!("MAKE EXECUTABLE: {}", path));
+        Ok(())
+    }
 }
 
 impl std::fmt::Debug for MockAdapter {
