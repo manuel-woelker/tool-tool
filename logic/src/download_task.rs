@@ -235,6 +235,11 @@ fn extract_targz(
                 }
                 let mut outfile = adapter.create_file(&joined_path)?;
                 std::io::copy(&mut archive_entry, &mut outfile)?;
+                if let Ok(mode) = archive_entry.header().mode()
+                    && mode & 0o100 != 0
+                {
+                    adapter.make_file_executable(&joined_path)?;
+                }
             }
             _ => {}
         }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tool_tool_base::result::{Context, ToolToolResult, bail};
 use tool_tool_logic::configuration::CONFIGURATION_FILE_NAME;
 use tracing::info;
-use tracing_subscriber::Layer;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 
@@ -14,10 +14,10 @@ pub fn run_cli() -> ToolToolResult<()> {
 
     let fmt_layer = tracing_subscriber::fmt::layer()
         .with_target(false)
-        .with_span_events(FmtSpan::ENTER)
-        .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
-
-    let registry = tracing_subscriber::registry().with(fmt_layer);
+        .with_span_events(FmtSpan::ENTER);
+    let registry = tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(EnvFilter::from_env("LOG"));
 
     tracing::subscriber::set_global_default(registry)
         .expect("setting default logging subscriber failed");
