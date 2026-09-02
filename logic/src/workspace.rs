@@ -1,8 +1,7 @@
 use crate::adapter::{Adapter, AdapterBox};
 use crate::checksums::Checksums;
 use crate::configuration::{
-    CACHE_DIRECTORY, CONFIGURATION_FILE_NAME, TOOL_TOOL_DIRECTORY, ToolConfiguration,
-    ToolToolConfiguration,
+    CONFIGURATION_FILE_NAME, TOOL_TOOL_DIRECTORY, ToolConfiguration, ToolToolConfiguration,
 };
 use crate::types::FilePath;
 use tool_tool_base::result::ToolToolResult;
@@ -41,7 +40,7 @@ impl Workspace {
     }
 
     pub fn cache_dir(&self) -> FilePath {
-        FilePath::from(CACHE_DIRECTORY)
+        FilePath::from(self.config.cache_directory.as_str())
     }
     pub fn tools_dir(&self) -> FilePath {
         self.cache_dir().join("tools")

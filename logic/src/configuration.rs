@@ -11,7 +11,7 @@ pub mod platform;
 
 pub const CONFIGURATION_FILE_NAME: &str = ".tool-tool/tool-tool.v2.kdl";
 pub const TOOL_TOOL_DIRECTORY: &str = ".tool-tool/v2/";
-pub const CACHE_DIRECTORY: &str = ".tool-tool/v2/cache";
+pub const DEFAULT_CACHE_DIRECTORY: &str = ".tool-tool/v2/cache";
 pub const CHECKSUM_FILE_NAME: &str = "checksums.kdl";
 
 #[derive(Debug, Clone)]
@@ -48,6 +48,7 @@ pub struct ToolConfiguration {
 
 #[derive(Debug, Clone)]
 pub struct ToolToolConfiguration {
+    pub cache_directory: String,
     pub tools: Vec<ToolConfiguration>,
 }
 

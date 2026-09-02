@@ -46,8 +46,9 @@ fn create_expander<'a>(
             .ok_or_else(|| err!("Could not find tool '{tool_name}'"))?;
 
         Ok(format!(
-            "{}/.tool-tool/v2/cache/{}-{}-{}",
+            "{}/{}/{}-{}-{}",
             adapter.get_base_path(),
+            config.cache_directory,
             tool.name,
             tool.version,
             adapter.get_platform()
@@ -145,6 +146,7 @@ mod tests {
             }"#,
         expect![[r#"
             ToolToolConfiguration {
+                cache_directory: ".tool-tool/v2/cache",
                 tools: [
                     ToolConfiguration {
                         name: "lsd",

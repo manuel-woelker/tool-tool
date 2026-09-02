@@ -77,9 +77,11 @@ Do not invoke binaries directly from `.tool-tool/v2/cache`; use their configured
 
 ## Configuration format
 
-The configuration is KDL. Each child of `tools` has a tool name and version. A tool may contain `download`, `commands`, and `env` blocks.
+The configuration is KDL. `cache-directory` optionally sets a project-relative cache path and defaults to `.tool-tool/v2/cache`. Each child of `tools` has a tool name and version. A tool may contain `download`, `commands`, and `env` blocks.
 
 ```kdl
+cache-directory ".cache/tool-tool"
+
 tools {
     node "24.13.0" {
         download {

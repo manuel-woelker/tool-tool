@@ -1,5 +1,7 @@
 use crate::configuration::platform::DownloadPlatform;
-use crate::configuration::{Command, DownloadArtifact, ToolConfiguration, ToolToolConfiguration};
+use crate::configuration::{
+    Command, DEFAULT_CACHE_DIRECTORY, DownloadArtifact, ToolConfiguration, ToolToolConfiguration,
+};
 use crate::types::EnvPair;
 use kdl::{KdlDocument, KdlNode};
 use miette::{LabeledSpan, Severity, miette};
@@ -19,6 +21,7 @@ pub fn parse_configuration_from_kdl(
     let _span = info_span!("Parse configuration from KDL ", filename).entered();
     (|| -> ToolToolResult<ToolToolConfiguration> {
         let mut tools = vec![];
+        let mut cache_directory = DEFAULT_CACHE_DIRECTORY.to_string();
         let result = kdl
             .parse::<KdlDocument>()
             .with_context(|| format!("Could not parse '{filename}'"))?;
@@ -31,6 +34,9 @@ pub fn parse_configuration_from_kdl(
                         tools.push(tool);
                     }
                 }
+                "cache-directory" => {
+                    cache_directory = parse_cache_directory(document_node)?;
+                }
                 other => {
                     let report = miette!(
                         code = "configuration::parse_config::parse_kdl".to_string(),
@@ -39,7 +45,7 @@ pub fn parse_configuration_from_kdl(
                             Some("unexpected".to_string()),
                             document_node.span()
                         )],
-                        help = "Valid top level items are: 'tools'",
+                        help = "Valid top level items are: 'cache-directory', 'tools'",
                         "Unexpected top-level item: '{other}'"
                     )
                     .with_source_code(kdl.to_string());
@@ -52,10 +58,30 @@ pub fn parse_configuration_from_kdl(
                 }
             }
         }
-        let configuration = ToolToolConfiguration { tools };
+        let configuration = ToolToolConfiguration {
+            cache_directory,
+            tools,
+        };
         Ok(configuration)
     })()
     .with_context(|| format!("Failed to parse KDL file '{filename}'"))
+}
+
+fn parse_cache_directory(node: &KdlNode) -> ToolToolResult<String> {
+    let cache_directory = node
+        .entry(0)
+        .and_then(|entry| entry.value().as_string())
+        .ok_or_else(|| err!("Expected cache-directory to be a string"))?;
+    let path = relative_path::RelativePath::new(cache_directory);
+    if cache_directory.is_empty()
+        || cache_directory.starts_with('/')
+        || path
+            .components()
+            .any(|component| component == relative_path::Component::ParentDir)
+    {
+        bail!("cache-directory must be a non-empty project-relative path without '..'");
+    }
+    Ok(cache_directory.to_string())
 }
 
 fn parse_tool(tool_node: &KdlNode) -> ToolToolResult<ToolConfiguration> {
@@ -169,6 +195,7 @@ mod tests {
         "",
         expect![[r#"
             ToolToolConfiguration {
+                cache_directory: ".tool-tool/v2/cache",
                 tools: [],
             }
         "#]]
@@ -179,10 +206,37 @@ mod tests {
         "tools",
         expect![[r#"
             ToolToolConfiguration {
+                cache_directory: ".tool-tool/v2/cache",
                 tools: [],
             }
         "#]]
     );
+
+    #[test]
+    fn custom_cache_directory() -> ToolToolResult<()> {
+        let config = parse_configuration_from_kdl(
+            CONFIGURATION_FILE_NAME,
+            r#"cache-directory ".cache/tool-tool"
+               tools"#,
+        )?;
+
+        assert_eq!(config.cache_directory, ".cache/tool-tool");
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_cache_directories() {
+        for cache_directory in ["", "/tmp/tool-tool", "../cache", "cache/../shared"] {
+            let config = format!("cache-directory {cache_directory:?}");
+            let error = parse_configuration_from_kdl(CONFIGURATION_FILE_NAME, &config)
+                .expect_err("invalid cache directory should fail");
+            assert!(
+                format!("{error:#}")
+                    .contains("cache-directory must be a non-empty project-relative path"),
+                "unexpected error for {cache_directory:?}: {error:#}"
+            );
+        }
+    }
 
     test_parse!(
         simple_tool,
@@ -191,6 +245,7 @@ mod tests {
         }"#,
         expect![[r#"
             ToolToolConfiguration {
+                cache_directory: ".tool-tool/v2/cache",
                 tools: [
                     ToolConfiguration {
                         name: "lsd",
@@ -217,6 +272,7 @@ mod tests {
         }"#,
         expect![[r#"
             ToolToolConfiguration {
+                cache_directory: ".tool-tool/v2/cache",
                 tools: [
                     ToolConfiguration {
                         name: "lsd",
@@ -256,6 +312,7 @@ mod tests {
         }"#,
         expect![[r#"
             ToolToolConfiguration {
+                cache_directory: ".tool-tool/v2/cache",
                 tools: [
                     ToolConfiguration {
                         name: "lsd",

@@ -169,6 +169,7 @@ impl ToolToolRunnerInitial {
         drop(lock_guard);
         let mut output = String::new();
         output.push_str("Expanded tool-tool configuration:\n");
+        output.push_str(&format!("\tcache directory: {}\n", config.cache_directory));
 
         for tool in &config.tools {
             output.push_str(&format!("\t{} {}:\n", tool.name, tool.version));
@@ -400,6 +401,7 @@ mod tests {
         assert!(output.contains("# tool-tool agent guide"));
         assert!(output.contains("tool-tool <command> [args...]"));
         assert!(output.contains("`.tool-tool/tool-tool.v2.kdl`"));
+        assert!(output.contains("cache-directory \".cache/tool-tool\""));
         assert!(output.contains("tools {"));
         assert!(output.contains("${dir:tool-name}"));
         assert!(!output.contains("TRY LOCK"));
@@ -717,6 +719,7 @@ mod tests {
         let (runner, adapter) = setup();
         adapter.set_configuration(
             r#"
+                cache-directory ".cache/tool-tool"
                 tools {
                     pnpm "12.2.1" {
                         download {
@@ -740,12 +743,12 @@ mod tests {
         runner.run();
 
         let effects = adapter.get_effects();
-        assert!(effects.contains("CREATE FILE: .tool-tool/v2/cache/pnpm-12.2.1-linux/pnpm"));
+        assert!(effects.contains("CREATE DIR: .cache/tool-tool/tmp/pnpm-rand-0"));
+        assert!(effects.contains("CREATE FILE: .cache/tool-tool/pnpm-12.2.1-linux/pnpm"));
         assert!(
-            effects
-                .contains("CREATE FILE: .tool-tool/v2/cache/pnpm-12.2.1-linux/dist/package.json")
+            effects.contains("CREATE FILE: .cache/tool-tool/pnpm-12.2.1-linux/dist/package.json")
         );
-        assert!(!effects.contains("CREATE FILE: .tool-tool/v2/cache/pnpm-12.2.1-linux\n"));
+        assert!(!effects.contains("CREATE FILE: .cache/tool-tool/pnpm-12.2.1-linux\n"));
         Ok(())
     }
 
@@ -962,6 +965,7 @@ mod tests {
             UNLOCK
             PRINT:
             	Expanded tool-tool configuration:
+            		cache directory: .tool-tool/v2/cache
             		lsd 1.2.3:
             			download urls:
             				linux:   https://example.com/test-1.2.3.tar.gz
@@ -1041,7 +1045,7 @@ mod tests {
             	   · ─┬─
             	   ·  ╰── unexpected
             	   ╰────
-            	  help: Valid top level items are: 'tools'
+            	  help: Valid top level items are: 'cache-directory', 'tools'
 
             EXIT: 1
         "#]]);
