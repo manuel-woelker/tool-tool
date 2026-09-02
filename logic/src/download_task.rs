@@ -6,6 +6,7 @@ use crate::workspace::Workspace;
 use flate2::read::GzDecoder;
 use relative_path::RelativePathBuf;
 use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::io::Read;
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
@@ -179,6 +180,28 @@ fn extract_zip(
 ) -> ToolToolResult<()> {
     let adapter = workspace.adapter();
     let mut archive = zip::ZipArchive::new(adapter.read_file(zip_path)?)?;
+    let mut common_root: Option<OsString> = None;
+    let mut has_top_level_file = false;
+
+    for i in 0..archive.len() {
+        let zip_entry = archive.by_index(i)?;
+        let Some(path) = zip_entry.enclosed_name() else {
+            continue;
+        };
+        let mut components = path.components();
+        let Some(first) = components.next() else {
+            continue;
+        };
+        let first = first.as_os_str().to_owned();
+        if common_root.as_ref().is_some_and(|root| root != &first) {
+            common_root = None;
+            has_top_level_file = true;
+            break;
+        }
+        common_root.get_or_insert(first);
+        has_top_level_file |= zip_entry.is_file() && components.next().is_none();
+    }
+    let strip_common_root = common_root.is_some() && !has_top_level_file;
 
     for i in 0..archive.len() {
         let mut zip_entry = archive.by_index(i).unwrap();
@@ -189,9 +212,10 @@ fn extract_zip(
 
         // TODO: check file does not escape
         let relative_path_buf = RelativePathBuf::from_path(outpath)?;
-        // TODO: make skip_components configurable
         let mut components = relative_path_buf.components();
-        components.next();
+        if strip_common_root {
+            components.next();
+        }
         let relative_path_buf = components.as_relative_path();
         let joined_path = destination_path.join(relative_path_buf);
         if zip_entry.is_dir() {
@@ -214,15 +238,39 @@ fn extract_targz(
 ) -> ToolToolResult<()> {
     let adapter = workspace.adapter();
     let mut archive = tar::Archive::new(GzDecoder::new(adapter.read_file(targz_path)?));
+    let mut common_root: Option<OsString> = None;
+    let mut has_top_level_file = false;
+
+    for archive_entry in archive.entries()? {
+        let archive_entry = archive_entry?;
+        let path = archive_entry.path()?;
+        let mut components = path.components();
+        let Some(first) = components.next() else {
+            continue;
+        };
+        let first = first.as_os_str().to_owned();
+        if common_root.as_ref().is_some_and(|root| root != &first) {
+            common_root = None;
+            has_top_level_file = true;
+            break;
+        }
+        common_root.get_or_insert(first);
+        has_top_level_file |=
+            archive_entry.header().entry_type().is_file() && components.next().is_none();
+    }
+    let strip_common_root = common_root.is_some() && !has_top_level_file;
+
+    let mut archive = tar::Archive::new(GzDecoder::new(adapter.read_file(targz_path)?));
     for archive_entry in archive.entries()? {
         let mut archive_entry = archive_entry?;
         let outpath = archive_entry.path()?;
 
         // TODO: check file does not escape
         let relative_path_buf = RelativePathBuf::from_path(outpath)?;
-        // TODO: make skip_components configurable
         let mut components = relative_path_buf.components();
-        components.next();
+        if strip_common_root {
+            components.next();
+        }
         let relative_path_buf = components.as_relative_path();
         let joined_path = destination_path.join(relative_path_buf);
         match archive_entry.header().entry_type() {

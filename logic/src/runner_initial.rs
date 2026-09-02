@@ -661,6 +661,7 @@ mod tests {
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
             DELETE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
+            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
             CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
             CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/foo
             WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/foo -> bar
@@ -686,6 +687,43 @@ mod tests {
 
             UNLOCK
         "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn download_targz_with_multiple_top_level_entries() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_configuration(
+            r#"
+                tools {
+                    pnpm "12.2.1" {
+                        download {
+                            linux "https://example.com/pnpm.tar.gz"
+                        }
+                        commands {
+                            pnpm "pnpm"
+                        }
+                    }
+                }
+            "#,
+        );
+        let mut archive = TarGzBuilder::default();
+        archive.add_file("pnpm", b"executable")?;
+        archive.add_directory("dist")?;
+        archive.add_file("dist/package.json", b"{}")?;
+        adapter.set_url("https://example.com/pnpm.tar.gz", archive.build()?);
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+
+        runner.run();
+
+        let effects = adapter.get_effects();
+        assert!(effects.contains("CREATE FILE: .tool-tool/v2/cache/pnpm-12.2.1-linux/pnpm"));
+        assert!(
+            effects
+                .contains("CREATE FILE: .tool-tool/v2/cache/pnpm-12.2.1-linux/dist/package.json")
+        );
+        assert!(!effects.contains("CREATE FILE: .tool-tool/v2/cache/pnpm-12.2.1-linux\n"));
         Ok(())
     }
 

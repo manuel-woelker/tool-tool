@@ -88,8 +88,13 @@ impl Adapter for RealAdapter {
 
     fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
         self.assert_locked()?;
-        std::fs::remove_dir_all(self.resolve_path(path)?)
-            .with_context(|| format!("Failed to delete directory {path:?}"))?;
+        let physical_path = self.resolve_path(path)?;
+        if physical_path.is_dir() {
+            std::fs::remove_dir_all(&physical_path)
+        } else {
+            std::fs::remove_file(&physical_path)
+        }
+        .with_context(|| format!("Failed to delete path {path:?}"))?;
         Ok(())
     }
 
@@ -321,6 +326,21 @@ mod tests {
         assert!(
             std::path::PathBuf::from(context.temp_dir.as_path_untracked().join("foo/bar")).exists()
         );
+    }
+
+    #[test]
+    fn delete_directory_all_removes_file() {
+        let context = setup();
+        let file_path = "cache-entry";
+        let path = context.temp_dir.as_path_untracked().join(file_path);
+        File::create(&path).unwrap();
+
+        context
+            .adapter
+            .delete_directory_all(&FilePath::from(file_path))
+            .unwrap();
+
+        assert!(!path.exists());
     }
 
     #[test]
