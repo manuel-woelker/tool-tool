@@ -60,10 +60,10 @@ tools {
 			PATH "${dir:node}"
 		}
 	}
-	pnpm "10.28.0" {
+	pnpm "12.2.1" {
 		download {
-			windows "https://github.com/pnpm/pnpm/releases/download/v${version}/pnpm-win-x64.exe"
-			linux "https://github.com/pnpm/pnpm/releases/download/v${version}/pnpm-linux-x64"
+			windows "https://github.com/pnpm/pnpm/releases/download/v${version}/pnpm-win32-x64.zip"
+			linux "https://github.com/pnpm/pnpm/releases/download/v${version}/pnpm-linux-x64-musl.tar.gz"
 		}
 		commands {
 			pnpm "pnpm"
