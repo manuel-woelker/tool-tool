@@ -5,4 +5,5 @@ sha512sums{
 "https://github.com/pnpm/pnpm/releases/download/v12.2.1/pnpm-win32-x64.zip" e2b2fc5c66595f241adab9684d02259648ec832495a4df30534ab0bd5ca000c4bf98a556ba67e5acfced90087a811532b5fe2c6274fa694e0c7032803398cca2
 "https://nodejs.org/dist/v24.13.0/node-v24.13.0-linux-x64.tar.gz" ff59bbf130f68fbb251e4a0ae0b50cf18c4135f3b8a90ef1f8c0263174128fed88a12d1c32df4c3da9cd4cbc67e430508f8b3d46ea3da69b244405fac5413c26
 "https://nodejs.org/dist/v24.13.0/node-v24.13.0-win-x64.zip" "54650c0d5b556c91e30a22b077f749edd4b13066db63700c2f644bafdafff3ed2c065f1581c831ea5e7ce9b9f0bcc4af64542cb258c3f166c1727b8c3eba2e18"
+"https://static.rust-lang.org/dist/rust-1.98.0-x86_64-unknown-linux-gnu.tar.gz" "873aa92b704b818dbcc8e5ff0edfa9ff25be932f9ffb2bdeb7dfbd35876ae8a3a86bba9d137c09464d2e7f3f064674214eba7066aef19e4bd74b8d7182aa89e4"
 }
