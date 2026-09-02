@@ -4,7 +4,7 @@ use crate::configuration::expand_config::expand_configuration_template_expressio
 use crate::configuration::parse_config::parse_configuration_from_kdl;
 use crate::configuration::{CONFIGURATION_FILE_NAME, ToolToolConfiguration};
 use crate::download_task::run_download_task;
-use crate::help::{generate_available_commands_message, print_help};
+use crate::help::{generate_available_commands_message, print_help, print_skill};
 use crate::lock_guard::LockGuard;
 use crate::run_command::run_command;
 use crate::types::FilePath;
@@ -66,6 +66,9 @@ impl ToolToolRunnerInitial {
             }
             "--help" => {
                 self.print_help();
+            }
+            "--skill" => {
+                print_skill(self.adapter.as_ref());
             }
             "--validate" => {
                 self.validate_config()?;
@@ -341,13 +344,15 @@ mod tests {
 
             	OPTIONS:
             	    --help              Show this help message
+            	    --skill             Show instructions for using tool-tool from an LLM agent
             	    --commands          Show available commands
             	    --version           Display version information
             	    --validate          Validate the tool configuration file
             	    --expand-config     Expand and display the configuration with all templates resolved
+            	    --download          Download all configured tool artifacts
 
             	EXAMPLES:
-            	    # Execute the 'foo' command defined in .tool-tool.v2.kdl
+            	    # Execute the 'foo' command defined in .tool-tool/tool-tool.v2.kdl
             	    # For available commands see below
             	    tool-tool foo
 
@@ -364,8 +369,8 @@ mod tests {
             	    tool-tool --expand-config
 
             	CONFIGURATION:
-            	    tool-tool looks for a configuration file named '.tool-tool.v2.kdl' in the current
-            	    directory. This file should contain the tool configuration in KDL format.
+            	    tool-tool looks for '.tool-tool/tool-tool.v2.kdl' in the current project.
+            	    This file contains the tool configuration in KDL format.
 
             	For more information, please refer to the documentation.
             TRY LOCK
@@ -381,6 +386,23 @@ mod tests {
             		toolyv  - tooly -v
 
         "#]]);
+        Ok(())
+    }
+
+    #[test]
+    fn print_skill() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_args(&["--skill"]);
+
+        runner.run();
+
+        let output = adapter.get_effects();
+        assert!(output.contains("# tool-tool agent guide"));
+        assert!(output.contains("tool-tool <command> [args...]"));
+        assert!(output.contains("`.tool-tool/tool-tool.v2.kdl`"));
+        assert!(output.contains("tools {"));
+        assert!(output.contains("${dir:tool-name}"));
+        assert!(!output.contains("TRY LOCK"));
         Ok(())
     }
 
