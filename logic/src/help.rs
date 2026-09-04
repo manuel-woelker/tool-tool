@@ -92,9 +92,6 @@ tools {
             node "${linux:bin/}node${windows:.exe}" description="Run Node.js"
             npm "${linux:bin/}npm${windows:.cmd}" description="Run npm"
         }
-        env {
-            PATH "${dir:node}${windows:;}${env:PATH}"
-        }
     }
 }
 ```

@@ -56,9 +56,6 @@ tools {
 			npm "${linux:bin/}npm"
 			npx "${linux:bin/}npx"
 		}
-		env {
-			PATH "${dir:node}"
-		}
 	}
 	pnpm "12.2.1" {
 		download {
@@ -77,8 +74,29 @@ tools {
 			cargo "cargo/bin/cargo"
 			rustc "rustc/bin/rustc"
 		}
+	}
+	// https://adoptium.net/temurin/releases/
+	java "26.0.2.1+1" {
+		download {
+			linux "https://github.com/adoptium/temurin26-binaries/releases/download/jdk-26.0.2.1%2B1/OpenJDK26U-jdk_x64_linux_hotspot_26.0.2.1_1.tar.gz"
+			windows "https://github.com/adoptium/temurin26-binaries/releases/download/jdk-26.0.2.1%2B1/OpenJDK26U-jdk_x64_windows_hotspot_26.0.2.1_1.zip"
+			macos "https://github.com/adoptium/temurin26-binaries/releases/download/jdk-26.0.2.1%2B1/OpenJDK26U-jdk_x64_mac_hotspot_26.0.2.1_1.tar.gz"
+		}
+		commands {
+			java "${macos:Contents/Home/}bin/java${windows:.exe}"
+			javac "${macos:Contents/Home/}bin/javac${windows:.exe}"
+		}
+	}
+	// https://gradle.org/releases/
+	gradle "9.7.1" {
+		download {
+			default "https://services.gradle.org/distributions/gradle-9.7.1-bin.zip"
+		}
+		commands {
+			gradle "bin/gradle${windows:.bat}"
+		}
 		env {
-			PATH "${env:PATH}"
+			JAVA_HOME "${dir:java}${macos:/Contents/Home}"
 		}
 	}
 }
