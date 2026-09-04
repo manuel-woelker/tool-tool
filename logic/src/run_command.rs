@@ -40,8 +40,8 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
             }
         }
     }
-    drop(lock_guard);
     let Some(binary_path) = binary_path_maybe else {
+        drop(lock_guard);
         if errors.is_empty() {
             bail!(
                 "Failed to find binary for command '{command_name}' in tool {}, found no matching executable binaries: {}({})",
@@ -58,6 +58,15 @@ pub fn run_command(workspace: &mut Workspace) -> ToolToolResult<()> {
             });
         }
     };
+    if workspace.adapter().get_platform() == DownloadPlatform::Linux {
+        workspace
+            .adapter()
+            .make_file_executable(&binary_path)
+            .with_context(|| {
+                format!("Failed to make binary executable for command '{command_name}'")
+            })?;
+    }
+    drop(lock_guard);
     let mut args = parsed_command;
     args.extend(command_args);
     let mut env = Vec::new();

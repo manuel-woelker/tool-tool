@@ -188,14 +188,14 @@ impl Adapter for RealAdapter {
         self.base_path.to_string_lossy().to_string()
     }
 
-    fn make_file_executable(&self, _path: &FilePath) -> ToolToolResult<()> {
+    fn make_file_executable(&self, path: &FilePath) -> ToolToolResult<()> {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(
-                self.resolve_path(_path)?,
-                std::fs::Permissions::from_mode(0o755),
-            )?;
+            let physical_path = self.resolve_path(path)?;
+            let mut permissions = std::fs::metadata(&physical_path)?.permissions();
+            permissions.set_mode(permissions.mode() | 0o111);
+            std::fs::set_permissions(physical_path, permissions)?;
         }
         Ok(())
     }
@@ -341,6 +341,28 @@ mod tests {
             .unwrap();
 
         assert!(!path.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn make_file_executable_preserves_existing_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let context = setup();
+        let file_path = "tool";
+        let path = context.temp_dir.as_path_untracked().join(file_path);
+        File::create(&path).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
+
+        context
+            .adapter
+            .make_file_executable(&FilePath::from(file_path))
+            .unwrap();
+
+        assert_eq!(
+            std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
+            0o751
+        );
     }
 
     #[test]

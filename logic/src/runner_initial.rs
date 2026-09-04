@@ -833,6 +833,29 @@ mod tests {
     }
 
     #[test]
+    fn run_command_makes_binary_executable_on_linux() -> ToolToolResult<()> {
+        let (runner, adapter) = setup_linux();
+        adapter.set_file(
+            ".tool-tool/v2/cache/lsd-1.2.3-linux/tooly",
+            b"executable".to_vec(),
+        );
+        adapter.set_args(&["tooly"]);
+
+        runner.run();
+
+        let effects = adapter.get_effects();
+        let make_executable = "MAKE EXECUTABLE: .tool-tool/v2/cache/lsd-1.2.3-linux/tooly";
+        assert!(effects.contains(make_executable));
+        assert!(
+            effects.find(make_executable).unwrap()
+                < effects
+                    .find("EXECUTE: .tool-tool/v2/cache/lsd-1.2.3-linux/tooly")
+                    .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
     fn run_command_long() -> ToolToolResult<()> {
         let (runner, adapter) = setup_windows();
         adapter.set_args(&["toolyhi"]);
