@@ -196,4 +196,31 @@ mod tests {
             }
         "#]]
     );
+
+    #[test]
+    fn expands_tool_directory_with_custom_cache() -> ToolToolResult<()> {
+        let adapter = MockAdapter::new();
+        let mut config = parse_configuration_from_kdl(
+            CONFIGURATION_FILE_NAME,
+            r#"
+                cache-directory ".cache/tools"
+                tools {
+                    node "24.13.0" {
+                        commands {
+                            node "${dir:pnpm}/bin/pnpm"
+                        }
+                    }
+                    pnpm "12.2.1"
+                }
+            "#,
+        )?;
+
+        expand_configuration_template_expressions(&mut config, &adapter)?;
+
+        assert_eq!(
+            config.tools[0].commands[0].command_string,
+            "<base_path>/.cache/tools/pnpm-12.2.1-linux/bin/pnpm"
+        );
+        Ok(())
+    }
 }
