@@ -338,6 +338,42 @@ mod tests {
         Ok(zstd::stream::encode_all(Cursor::new(build_test_tar()?), 0)?)
     }
 
+    fn build_unsafe_targz(path: &str, entry_type: tar::EntryType) -> ToolToolResult<Vec<u8>> {
+        let encoder =
+            flate2::write::GzEncoder::new(Cursor::new(Vec::new()), flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        for safe_path in ["first/file", "second/file"] {
+            let mut safe_header = tar::Header::new_gnu();
+            safe_header.set_size(1);
+            builder.append_data(&mut safe_header, safe_path, &b"x"[..])?;
+        }
+        let mut header = tar::Header::new_gnu();
+        header.set_entry_type(entry_type);
+        header.set_size(0);
+        let name = path.as_bytes();
+        header.as_mut_bytes()[..name.len()].copy_from_slice(name);
+        header.set_cksum();
+        builder.append(&header, std::io::empty())?;
+        builder.finish()?;
+        Ok(builder.into_inner()?.finish()?.into_inner())
+    }
+
+    fn build_unsafe_zip(path: &str, symlink: bool) -> ToolToolResult<Vec<u8>> {
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default();
+        writer.start_file("first/file", options)?;
+        writer.write_all(b"x")?;
+        writer.start_file("second/file", options)?;
+        writer.write_all(b"x")?;
+        if symlink {
+            writer.add_symlink(path, "../../outside", options)?;
+        } else {
+            writer.start_file(path, options)?;
+            writer.write_all(b"escape")?;
+        }
+        Ok(writer.finish()?.into_inner())
+    }
+
     fn build_archive<T: ArchiveBuilder>() -> ToolToolResult<Vec<u8>> {
         let mut archive_builder = T::default();
         archive_builder.add_file("upper/foo", b"bar")?;
@@ -749,6 +785,74 @@ mod tests {
         verify_compressed_tar_download(
             "https://example.com/test-1.0.0.tar.zstd",
             build_test_tar_zstd()?,
+        )
+    }
+
+    fn verify_unsafe_archive_is_rejected(
+        url: &str,
+        archive: Vec<u8>,
+        expected_error: &str,
+    ) -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_configuration(format!(
+            r#"
+                tools {{
+                    test "1.0.0" {{
+                        download {{ linux "{url}" }}
+                        commands {{ test "test" }}
+                    }}
+                }}
+            "#
+        ));
+        adapter.set_url(url, archive);
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+
+        runner.run();
+
+        let effects = adapter.get_effects();
+        assert!(effects.contains(expected_error), "effects:\n{effects}");
+        assert!(effects.contains("EXIT: 1"), "effects:\n{effects}");
+        assert!(
+            !effects.contains("CREATE FILE: .tool-tool/v2/cache/test-1.0.0-linux/"),
+            "archive created files before validation failed:\n{effects}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_tar_path_traversal() -> ToolToolResult<()> {
+        verify_unsafe_archive_is_rejected(
+            "https://example.com/unsafe.tar.gz",
+            build_unsafe_targz("../outside", tar::EntryType::Regular)?,
+            "Archive contains unsafe path: '../outside'",
+        )
+    }
+
+    #[test]
+    fn rejects_tar_links() -> ToolToolResult<()> {
+        verify_unsafe_archive_is_rejected(
+            "https://example.com/unsafe.tar.gz",
+            build_unsafe_targz("link", tar::EntryType::Symlink)?,
+            "Archive contains unsafe link entry: 'link'",
+        )
+    }
+
+    #[test]
+    fn rejects_zip_path_traversal() -> ToolToolResult<()> {
+        verify_unsafe_archive_is_rejected(
+            "https://example.com/unsafe.zip",
+            build_unsafe_zip("../outside", false)?,
+            "Archive contains unsafe path: '../outside'",
+        )
+    }
+
+    #[test]
+    fn rejects_zip_links() -> ToolToolResult<()> {
+        verify_unsafe_archive_is_rejected(
+            "https://example.com/unsafe.zip",
+            build_unsafe_zip("link", true)?,
+            "Archive contains unsafe symbolic link: 'link'",
         )
     }
 

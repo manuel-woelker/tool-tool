@@ -9,6 +9,7 @@ use relative_path::RelativePathBuf;
 use std::collections::{BTreeMap, HashSet};
 use std::ffi::OsString;
 use std::io::Read;
+use std::path::{Component, Path};
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
 use tracing::{debug, info};
@@ -304,9 +305,16 @@ fn extract_zip(
 
     for i in 0..archive.len() {
         let zip_entry = archive.by_index(i)?;
-        let Some(path) = zip_entry.enclosed_name() else {
-            continue;
-        };
+        let path = zip_entry
+            .enclosed_name()
+            .ok_or_else(|| err!("Archive contains unsafe path: '{}'", zip_entry.name()))?;
+        validate_archive_path(zip_entry.name(), &path)?;
+        if zip_entry.is_symlink() {
+            return Err(err!(
+                "Archive contains unsafe symbolic link: '{}'",
+                zip_entry.name()
+            ));
+        }
         let mut components = path.components();
         let Some(first) = components.next() else {
             continue;
@@ -315,7 +323,7 @@ fn extract_zip(
         if common_root.as_ref().is_some_and(|root| root != &first) {
             common_root = None;
             has_top_level_file = true;
-            break;
+            continue;
         }
         common_root.get_or_insert(first);
         has_top_level_file |= zip_entry.is_file() && components.next().is_none();
@@ -324,12 +332,11 @@ fn extract_zip(
 
     for i in 0..archive.len() {
         let mut zip_entry = archive.by_index(i).unwrap();
-        let outpath = match zip_entry.enclosed_name() {
-            Some(path) => path,
-            None => continue,
-        };
+        let outpath = zip_entry
+            .enclosed_name()
+            .ok_or_else(|| err!("Archive contains unsafe path: '{}'", zip_entry.name()))?;
+        validate_archive_path(zip_entry.name(), &outpath)?;
 
-        // TODO: check file does not escape
         let relative_path_buf = RelativePathBuf::from_path(outpath)?;
         let mut components = relative_path_buf.components();
         if strip_common_root {
@@ -364,6 +371,7 @@ fn extract_tar<R: Read>(
     for archive_entry in archive.entries()? {
         let archive_entry = archive_entry?;
         let path = archive_entry.path()?;
+        validate_tar_entry(&archive_entry, &path)?;
         let mut components = path.components();
         let Some(first) = components.next() else {
             continue;
@@ -372,7 +380,7 @@ fn extract_tar<R: Read>(
         if common_root.as_ref().is_some_and(|root| root != &first) {
             common_root = None;
             has_top_level_file = true;
-            break;
+            continue;
         }
         common_root.get_or_insert(first);
         has_top_level_file |=
@@ -384,8 +392,8 @@ fn extract_tar<R: Read>(
     for archive_entry in archive.entries()? {
         let mut archive_entry = archive_entry?;
         let outpath = archive_entry.path()?;
+        validate_tar_entry(&archive_entry, &outpath)?;
 
-        // TODO: check file does not escape
         let relative_path_buf = RelativePathBuf::from_path(outpath)?;
         let mut components = relative_path_buf.components();
         if strip_common_root {
@@ -412,6 +420,30 @@ fn extract_tar<R: Read>(
             _ => {}
         }
     }
+    Ok(())
+}
+
+fn validate_archive_path(name: &str, path: &Path) -> ToolToolResult<()> {
+    if path.components().any(|component| {
+        matches!(
+            component,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        )
+    }) {
+        return Err(err!("Archive contains unsafe path: '{name}'"));
+    }
+    Ok(())
+}
+
+fn validate_tar_entry<R: Read>(entry: &tar::Entry<'_, R>, path: &Path) -> ToolToolResult<()> {
+    let entry_type = entry.header().entry_type();
+    if entry_type.is_symlink() || entry_type.is_hard_link() {
+        return Err(err!(
+            "Archive contains unsafe link entry: '{}'",
+            path.display()
+        ));
+    }
+    validate_archive_path(&path.display().to_string(), path)?;
     Ok(())
 }
 
