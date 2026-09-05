@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::env;
 use std::fmt::Debug;
 use std::fs::{File, TryLockError};
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
@@ -27,7 +27,7 @@ impl RealAdapter {
         Self {
             lockfile_path: base_path.join(".tool-tool/v2/cache/lockfile").to_path_buf(),
             base_path,
-            downloader: download::Downloader::new(),
+            downloader: download::Downloader::new(std::io::stderr().is_terminal()),
             reference_instant: Instant::now(),
             lockfile: Default::default(),
         }

@@ -1,12 +1,15 @@
+use indicatif::{ProgressBar, ProgressStyle};
+use std::io::{Read, Write};
 use tool_tool_base::result::{Context, ToolToolResult};
 use ureq::tls::{RootCerts, TlsConfig};
 
 pub struct Downloader {
     agent: ureq::Agent,
+    show_progress: bool,
 }
 
 impl Downloader {
-    pub fn new() -> Self {
+    pub fn new(show_progress: bool) -> Self {
         let agent = ureq::config::Config::builder()
             .tls_config(
                 TlsConfig::builder()
@@ -16,15 +19,23 @@ impl Downloader {
             .build()
             .new_agent();
 
-        Self { agent }
+        Self {
+            agent,
+            show_progress,
+        }
     }
 
     pub fn download(&self, url: &str, destination_path: &std::path::Path) -> ToolToolResult<()> {
         (|| -> ToolToolResult<()> {
             let response = self.agent.get(url).call()?;
+            let content_length = response.body().content_length();
             let mut reader = response.into_body().into_reader();
             let mut output_file = std::fs::File::create(destination_path)?;
-            std::io::copy(&mut reader, &mut output_file)?;
+            if self.show_progress {
+                copy_with_progress(url, content_length, &mut reader, &mut output_file)?;
+            } else {
+                std::io::copy(&mut reader, &mut output_file)?;
+            }
             Ok(())
         })()
         .with_context(|| format!("Failed to download '{url}' to '{destination_path:?}'"))
@@ -33,8 +44,64 @@ impl Downloader {
 
 impl Default for Downloader {
     fn default() -> Self {
-        Self::new()
+        Self::new(false)
     }
+}
+
+fn copy_with_progress(
+    url: &str,
+    content_length: Option<u64>,
+    reader: &mut impl Read,
+    writer: &mut impl Write,
+) -> ToolToolResult<()> {
+    let progress = match content_length {
+        Some(length) => {
+            let progress = ProgressBar::new(length);
+            progress.set_style(ProgressStyle::with_template(
+                "{spinner:.green} {msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {bytes_per_sec} ETA {eta}",
+            )?);
+            progress
+        }
+        None => {
+            let progress = ProgressBar::new_spinner();
+            progress.set_style(ProgressStyle::with_template(
+                "{spinner:.green} {msg} {bytes} {bytes_per_sec}",
+            )?);
+            progress
+        }
+    };
+    progress.set_message(download_name(url));
+    progress.enable_steady_tick(std::time::Duration::from_millis(100));
+
+    let result = (|| -> std::io::Result<()> {
+        let mut buffer = [0; 64 * 1024];
+        loop {
+            let bytes_read = reader.read(&mut buffer)?;
+            if bytes_read == 0 {
+                break;
+            }
+            writer.write_all(&buffer[..bytes_read])?;
+            progress.inc(bytes_read as u64);
+        }
+        Ok(())
+    })();
+
+    if result.is_ok() {
+        progress.finish_and_clear();
+    } else {
+        progress.abandon();
+    }
+    result?;
+    Ok(())
+}
+
+fn download_name(url: &str) -> String {
+    url.split(['?', '#'])
+        .next()
+        .and_then(|url| url.rsplit('/').next())
+        .filter(|name| !name.is_empty())
+        .unwrap_or("download")
+        .to_string()
 }
 
 #[cfg(test)]
@@ -67,7 +134,7 @@ mod tests {
             temp_dir,
             server,
             content: content.to_string(),
-            downloader: Downloader::new(),
+            downloader: Downloader::new(false),
         }
     }
 
@@ -80,6 +147,29 @@ mod tests {
             .unwrap();
         let actual_content = std::fs::read_to_string(local_path.as_path()).unwrap();
         assert_eq!(actual_content, ctx.content);
+    }
+
+    #[test]
+    fn test_download_with_progress() {
+        let ctx = setup();
+        let local_path = ctx
+            .temp_dir
+            .used_by(|path| path.join("file_download_with_progress"));
+        Downloader::new(true)
+            .download(&ctx.server.url("/download_url"), local_path.as_path())
+            .unwrap();
+
+        let actual_content = std::fs::read_to_string(local_path.as_path()).unwrap();
+        assert_eq!(actual_content, ctx.content);
+    }
+
+    #[test]
+    fn test_download_name() {
+        assert_eq!(
+            download_name("https://example.com/releases/tool.tar.gz?token=secret"),
+            "tool.tar.gz"
+        );
+        assert_eq!(download_name("https://example.com/"), "download");
     }
 
     #[test]
