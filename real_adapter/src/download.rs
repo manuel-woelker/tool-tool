@@ -36,12 +36,18 @@ impl Downloader {
     }
 
     pub fn download(&self, url: &str, destination_path: &Path) -> ToolToolResult<()> {
-        self.download_files(&[(url.to_string(), destination_path.to_path_buf())])
+        self.download_files(&[(url.to_string(), destination_path.to_path_buf())])?
+            .into_iter()
+            .next()
+            .expect("single download result")
     }
 
-    pub fn download_files(&self, requests: &[(String, PathBuf)]) -> ToolToolResult<()> {
+    pub fn download_files(
+        &self,
+        requests: &[(String, PathBuf)],
+    ) -> ToolToolResult<Vec<ToolToolResult<()>>> {
         if requests.is_empty() {
-            return Ok(());
+            return Ok(Vec::new());
         }
 
         let multi_progress = MultiProgress::new();
@@ -56,7 +62,11 @@ impl Downloader {
             })
             .collect::<ToolToolResult<Vec<_>>>()?;
         let next_request = AtomicUsize::new(0);
-        let errors = Mutex::new(Vec::new());
+        let results = Mutex::new(
+            (0..requests.len())
+                .map(|_| None)
+                .collect::<Vec<Option<ToolToolResult<()>>>>(),
+        );
         let worker_count = requests.len().min(Self::MAX_CONCURRENT_DOWNLOADS);
 
         std::thread::scope(|scope| {
@@ -67,14 +77,13 @@ impl Downloader {
                         let Some((url, destination_path)) = requests.get(index) else {
                             break;
                         };
-                        if let Err(error) = download_one(
+                        let result = download_one(
                             &self.agent,
                             url,
                             destination_path,
                             progress_bars[index].as_ref(),
-                        ) {
-                            errors.lock().unwrap().push((index, error));
-                        }
+                        );
+                        results.lock().unwrap()[index] = Some(result);
                     }
                 });
             }
@@ -83,12 +92,12 @@ impl Downloader {
         if self.show_progress {
             multi_progress.clear()?;
         }
-        let mut errors = errors.into_inner().unwrap();
-        errors.sort_by_key(|(index, _)| *index);
-        if let Some((_, error)) = errors.into_iter().next() {
-            return Err(error);
-        }
-        Ok(())
+        Ok(results
+            .into_inner()
+            .unwrap()
+            .into_iter()
+            .map(|result| result.expect("download worker did not produce a result"))
+            .collect())
     }
 }
 
@@ -265,7 +274,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         let started = Instant::now();
-        Downloader::new(false).download_files(&requests).unwrap();
+        let results = Downloader::new(false).download_files(&requests).unwrap();
 
         assert!(
             started.elapsed() < Duration::from_millis(1_300),
@@ -273,6 +282,7 @@ mod tests {
             started.elapsed()
         );
         download.assert_hits(6);
+        assert!(results.into_iter().all(|result| result.is_ok()));
         for (_, path) in requests {
             assert_eq!(std::fs::read_to_string(path).unwrap(), "download content");
         }

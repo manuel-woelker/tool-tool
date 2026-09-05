@@ -86,6 +86,29 @@ impl Adapter for RealAdapter {
         Ok(())
     }
 
+    fn create_symbolic_link(&self, path: &FilePath, target: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked()?;
+        let physical_path = self.resolve_path(path)?;
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target.as_str(), &physical_path)?;
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(target.as_str(), &physical_path)?;
+        Ok(())
+    }
+
+    fn create_hard_link(&self, path: &FilePath, target: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked()?;
+        std::fs::hard_link(self.resolve_path(target)?, self.resolve_path(path)?)?;
+        Ok(())
+    }
+
+    fn rename_path(&self, from: &FilePath, to: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked()?;
+        std::fs::rename(self.resolve_path(from)?, self.resolve_path(to)?)
+            .with_context(|| format!("Failed to rename path '{from}' to '{to}'"))?;
+        Ok(())
+    }
+
     fn delete_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
         self.assert_locked()?;
         let physical_path = self.resolve_path(path)?;
@@ -109,7 +132,10 @@ impl Adapter for RealAdapter {
         Ok(())
     }
 
-    fn download_files(&self, requests: &[DownloadRequest]) -> ToolToolResult<()> {
+    fn download_files(
+        &self,
+        requests: &[DownloadRequest],
+    ) -> ToolToolResult<Vec<ToolToolResult<()>>> {
         self.assert_locked()?;
         let requests = requests
             .iter()
@@ -376,6 +402,44 @@ mod tests {
         assert_eq!(
             std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
             0o751
+        );
+    }
+
+    #[test]
+    fn rename_path_swaps_directories() {
+        let ctx = setup();
+        let old_path = ctx.temp_dir.as_path_untracked().join("cache/tool");
+        let staging_path = ctx.temp_dir.as_path_untracked().join("cache/staging");
+        std::fs::create_dir_all(&old_path).unwrap();
+        std::fs::create_dir_all(&staging_path).unwrap();
+        std::fs::write(old_path.join("version"), "old").unwrap();
+        std::fs::write(staging_path.join("version"), "new").unwrap();
+
+        ctx.adapter
+            .rename_path(
+                &FilePath::from("cache/tool"),
+                &FilePath::from("cache/previous"),
+            )
+            .unwrap();
+        ctx.adapter
+            .rename_path(
+                &FilePath::from("cache/staging"),
+                &FilePath::from("cache/tool"),
+            )
+            .unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(old_path.join("version")).unwrap(),
+            "new"
+        );
+        assert_eq!(
+            std::fs::read_to_string(
+                ctx.temp_dir
+                    .as_path_untracked()
+                    .join("cache/previous/version")
+            )
+            .unwrap(),
+            "old"
         );
     }
 

@@ -350,6 +350,9 @@ mod tests {
         let mut header = tar::Header::new_gnu();
         header.set_entry_type(entry_type);
         header.set_size(0);
+        if entry_type.is_symlink() || entry_type.is_hard_link() {
+            header.set_link_name("../../outside")?;
+        }
         let name = path.as_bytes();
         header.as_mut_bytes()[..name.len()].copy_from_slice(name);
         header.set_cksum();
@@ -372,6 +375,34 @@ mod tests {
             writer.write_all(b"escape")?;
         }
         Ok(writer.finish()?.into_inner())
+    }
+
+    fn build_safe_link_targz() -> ToolToolResult<Vec<u8>> {
+        let encoder =
+            flate2::write::GzEncoder::new(Cursor::new(Vec::new()), flate2::Compression::default());
+        let mut builder = tar::Builder::new(encoder);
+        let mut file_header = tar::Header::new_gnu();
+        file_header.set_size(4);
+        builder.append_data(&mut file_header, "upper/lib/npm.js", &b"npm!"[..])?;
+
+        let mut symlink_header = tar::Header::new_gnu();
+        symlink_header.set_entry_type(tar::EntryType::Symlink);
+        symlink_header.set_size(0);
+        symlink_header.set_path("upper/bin/npm")?;
+        symlink_header.set_link_name("../lib/npm.js")?;
+        symlink_header.set_cksum();
+        builder.append(&symlink_header, std::io::empty())?;
+
+        let mut hard_link_header = tar::Header::new_gnu();
+        hard_link_header.set_entry_type(tar::EntryType::Link);
+        hard_link_header.set_size(0);
+        hard_link_header.set_path("upper/bin/npm-hard")?;
+        hard_link_header.set_link_name("upper/lib/npm.js")?;
+        hard_link_header.set_cksum();
+        builder.append(&hard_link_header, std::io::empty())?;
+
+        builder.finish()?;
+        Ok(builder.into_inner()?.finish()?.into_inner())
     }
 
     fn build_archive<T: ArchiveBuilder>() -> ToolToolResult<Vec<u8>> {
@@ -521,19 +552,20 @@ mod tests {
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz -> bizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/foo
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/foo -> bar
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/tooly.exe
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz/buzz
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            RENAME: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted -> .tool-tool/v2/cache/lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
@@ -565,19 +597,20 @@ mod tests {
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-windows
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/fizz/buzz -> bizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-windows/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/foo
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/foo -> bar
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/tooly.exe
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz/buzz
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/.tool-tool.sha512 -> 5df8ca046e3a7cdb35d89cfe6746d6ab3931b20fb8be9328ddc50e14d40c23fa2eec71ba3d2da52efbbc3fde059c15b37f05aabf7e0e8a8e5b95e18278031394
+            FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-windows
+            RENAME: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted -> .tool-tool/v2/cache/lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-linux
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
@@ -719,20 +752,21 @@ mod tests {
             DOWNLOAD: https://example.com/test-1.2.3.tar.gz -> .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
             DOWNLOAD: https://example.com/test-1.2.3.zip -> .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-windows
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
+            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
+            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/foo
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/foo -> bar
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/tooly.exe
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/tooly.exe -> # just a tool
+            CREATE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz/buzz
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/fizz/buzz -> bizz
+            CREATE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/.tool-tool.sha512
+            WRITE FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted/.tool-tool.sha512 -> e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
             FILE EXISTS?: .tool-tool/v2/cache/lsd-1.2.3-linux
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-0/download-lsd-1.2.3-linux
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/foo
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/foo -> bar
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/tooly.exe
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/tooly.exe -> # just a tool
-            CREATE DIR: .tool-tool/v2/cache/lsd-1.2.3-linux/fizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/fizz/buzz
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/fizz/buzz -> bizz
-            CREATE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/.tool-tool.sha512
-            WRITE FILE: .tool-tool/v2/cache/lsd-1.2.3-linux/.tool-tool.sha512 -> e464642c51b5a2354a00b63111acd0197d377bf1a3fbd167d6f46374351ea93a15ec58f0357d4575068a5b076f8628cc1e5d6392d0d5b16a0da0bbbae789be71
+            RENAME: .tool-tool/v2/cache/tmp/lsd-rand-0/extracted -> .tool-tool/v2/cache/lsd-1.2.3-linux
             READ FILE: .tool-tool/v2/cache/tmp/lsd-rand-1/download-lsd-1.2.3-windows
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-0
             DELETE DIR: .tool-tool/v2/cache/tmp/lsd-rand-1
@@ -766,8 +800,13 @@ mod tests {
         runner.run();
 
         let effects = adapter.get_effects();
-        assert!(effects.contains("CREATE FILE: .tool-tool/v2/cache/test-1.0.0-linux/foo"));
-        assert!(effects.contains("CREATE FILE: .tool-tool/v2/cache/test-1.0.0-linux/fizz/buzz"));
+        assert!(
+            effects
+                .contains("CREATE FILE: .tool-tool/v2/cache/tmp/test-rand-0/extracted/fizz/buzz")
+        );
+        assert!(effects.contains(
+            "RENAME: .tool-tool/v2/cache/tmp/test-rand-0/extracted -> .tool-tool/v2/cache/test-1.0.0-linux"
+        ));
         assert!(!effects.contains("EXIT: 1"));
         Ok(())
     }
@@ -814,7 +853,7 @@ mod tests {
         assert!(effects.contains(expected_error), "effects:\n{effects}");
         assert!(effects.contains("EXIT: 1"), "effects:\n{effects}");
         assert!(
-            !effects.contains("CREATE FILE: .tool-tool/v2/cache/test-1.0.0-linux/"),
+            !effects.contains("/extracted/"),
             "archive created files before validation failed:\n{effects}"
         );
         Ok(())
@@ -830,11 +869,42 @@ mod tests {
     }
 
     #[test]
+    fn extracts_safe_internal_tar_links() -> ToolToolResult<()> {
+        let url = "https://example.com/safe-links.tar.gz";
+        let (runner, adapter) = setup();
+        adapter.set_configuration(format!(
+            r#"
+                tools {{
+                    test "1.0.0" {{
+                        download {{ linux "{url}" }}
+                        commands {{ test "bin/npm" }}
+                    }}
+                }}
+            "#
+        ));
+        adapter.set_url(url, build_safe_link_targz()?);
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+
+        runner.run();
+
+        let effects = adapter.get_effects();
+        assert!(effects.contains(
+            "CREATE SYMLINK: .tool-tool/v2/cache/tmp/test-rand-0/extracted/bin/npm -> ../lib/npm.js"
+        ));
+        assert!(effects.contains(
+            "CREATE HARD LINK: .tool-tool/v2/cache/tmp/test-rand-0/extracted/bin/npm-hard -> .tool-tool/v2/cache/tmp/test-rand-0/extracted/lib/npm.js"
+        ));
+        assert!(!effects.contains("EXIT: 1"), "effects:\n{effects}");
+        Ok(())
+    }
+
+    #[test]
     fn rejects_tar_links() -> ToolToolResult<()> {
         verify_unsafe_archive_is_rejected(
             "https://example.com/unsafe.tar.gz",
             build_unsafe_targz("link", tar::EntryType::Symlink)?,
-            "Archive contains unsafe link entry: 'link'",
+            "Archive link 'link' points outside the tool directory: '../../outside'",
         )
     }
 
@@ -852,7 +922,7 @@ mod tests {
         verify_unsafe_archive_is_rejected(
             "https://example.com/unsafe.zip",
             build_unsafe_zip("link", true)?,
-            "Archive contains unsafe symbolic link: 'link'",
+            "Archive link 'link' points outside the tool directory: '../../outside'",
         )
     }
 
@@ -886,11 +956,103 @@ mod tests {
 
         let effects = adapter.get_effects();
         assert!(effects.contains("CREATE DIR: .cache/tool-tool/tmp/pnpm-rand-0"));
-        assert!(effects.contains("CREATE FILE: .cache/tool-tool/pnpm-12.2.1-linux/pnpm"));
+        assert!(effects.contains("CREATE FILE: .cache/tool-tool/tmp/pnpm-rand-0/extracted/pnpm"));
         assert!(
-            effects.contains("CREATE FILE: .cache/tool-tool/pnpm-12.2.1-linux/dist/package.json")
+            effects.contains(
+                "CREATE FILE: .cache/tool-tool/tmp/pnpm-rand-0/extracted/dist/package.json"
+            )
         );
         assert!(!effects.contains("CREATE FILE: .cache/tool-tool/pnpm-12.2.1-linux\n"));
+        Ok(())
+    }
+
+    #[test]
+    fn preserves_successful_downloads_when_other_downloads_fail() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_configuration(
+            r#"
+                tools {
+                    good "1.0.0" {
+                        download { linux "https://example.com/good.zip" }
+                        commands { good "tooly.exe" }
+                    }
+                    missing "1.0.0" {
+                        download { linux "https://example.com/missing.zip" }
+                        commands { missing "missing" }
+                    }
+                    invalid "1.0.0" {
+                        download { linux "https://example.com/invalid.zip" }
+                        commands { invalid "invalid" }
+                    }
+                }
+            "#,
+        );
+        adapter.set_url("https://example.com/good.zip", build_test_zip()?);
+        adapter.set_url("https://example.com/invalid.zip", b"not a zip".to_vec());
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+
+        runner.run();
+
+        let first_run = adapter.get_effects();
+        assert!(first_run.contains(
+            "RENAME: .tool-tool/v2/cache/tmp/good-rand-0/extracted -> .tool-tool/v2/cache/good-1.0.0-linux"
+        ));
+        assert!(first_run.contains("URL 'https://example.com/missing.zip' does not exist"));
+        assert!(first_run.contains("invalid Zip archive"));
+        assert!(first_run.contains("EXIT: 1"));
+
+        adapter.clear_effects();
+        runner.run();
+
+        let second_run = adapter.get_effects();
+        assert!(!second_run.contains("DOWNLOAD: https://example.com/good.zip"));
+        assert!(second_run.contains("DOWNLOAD: https://example.com/missing.zip"));
+        assert!(second_run.contains("DOWNLOAD: https://example.com/invalid.zip"));
+        Ok(())
+    }
+
+    #[test]
+    fn restores_previous_installation_when_atomic_swap_fails() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        let configuration = |url: &str| {
+            format!(
+                r#"
+                    tools {{
+                        test "1.0.0" {{
+                            download {{ linux "{url}" }}
+                            commands {{ test "foo" }}
+                        }}
+                    }}
+                "#
+            )
+        };
+        adapter.set_configuration(configuration("https://example.com/old.zip"));
+        adapter.set_url("https://example.com/old.zip", build_test_zip()?);
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+        runner.run();
+
+        let mut replacement = ZipBuilder::default();
+        replacement.add_file("upper/foo", b"replacement")?;
+        adapter.set_configuration(configuration("https://example.com/new.zip"));
+        adapter.set_url("https://example.com/new.zip", replacement.build()?);
+        adapter.fail_rename_from(".tool-tool/v2/cache/tmp/test-rand-1/extracted");
+        adapter.clear_effects();
+
+        runner.run();
+
+        let effects = adapter.get_effects();
+        assert!(effects.contains(
+            "RENAME: .tool-tool/v2/cache/test-1.0.0-linux -> .tool-tool/v2/cache/tmp/test-rand-1/previous"
+        ));
+        assert!(effects.contains(
+            "RENAME: .tool-tool/v2/cache/tmp/test-rand-1/previous -> .tool-tool/v2/cache/test-1.0.0-linux"
+        ));
+        assert_eq!(
+            adapter.get_file(".tool-tool/v2/cache/test-1.0.0-linux/foo"),
+            Some(b"bar".to_vec())
+        );
         Ok(())
     }
 

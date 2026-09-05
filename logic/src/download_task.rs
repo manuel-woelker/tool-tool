@@ -9,7 +9,7 @@ use relative_path::RelativePathBuf;
 use std::collections::{BTreeMap, HashSet};
 use std::ffi::OsString;
 use std::io::Read;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 use tar::EntryType;
 use tool_tool_base::result::{ToolToolResult, err};
 use tracing::{debug, info};
@@ -53,7 +53,6 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
             tool,
             url: artifact.url.clone(),
             tool_path,
-            checksum_path,
             temp_dir,
             download_path,
         });
@@ -89,40 +88,57 @@ pub fn run_download_task(workspace: &mut Workspace) -> ToolToolResult<()> {
                 .map(PlannedChecksumDownload::request),
         )
         .collect::<Vec<_>>();
-    if let Err(error) = adapter.download_files(&requests) {
-        let _ = cleanup_temp_directories(workspace, &tool_downloads, &checksum_downloads);
-        return Err(error);
-    }
+    let download_results = adapter.download_files(&requests)?;
+    let (tool_results, checksum_results) = download_results.split_at(tool_downloads.len());
+    let mut errors = Vec::new();
 
-    let processing_result = (|| -> ToolToolResult<()> {
-        for download in &tool_downloads {
-            process_tool_download(workspace, download, &mut new_sha512sums)?;
+    for (download, result) in tool_downloads.iter().zip(tool_results) {
+        let result = result
+            .as_ref()
+            .map_err(|error| err!("{error:#}"))
+            .and_then(|_| process_tool_download(workspace, download, &mut new_sha512sums));
+        if let Err(error) = result {
+            errors.push(error);
         }
-        for download in &checksum_downloads {
-            let mut download_file = adapter.read_file(&download.download_path)?;
-            let sha512 = compute_sha512(download_file.as_mut())?;
-            new_sha512sums.insert(download.url.clone(), sha512);
-        }
-        Ok(())
-    })();
-    if let Err(error) = processing_result {
-        let _ = cleanup_temp_directories(workspace, &tool_downloads, &checksum_downloads);
-        return Err(error);
     }
-    cleanup_temp_directories(workspace, &tool_downloads, &checksum_downloads)?;
+    for (download, result) in checksum_downloads.iter().zip(checksum_results) {
+        let result = result
+            .as_ref()
+            .map_err(|error| err!("{error:#}"))
+            .and_then(|_| {
+                let mut download_file = adapter.read_file(&download.download_path)?;
+                let sha512 = compute_sha512(download_file.as_mut())?;
+                new_sha512sums.insert(download.url.clone(), sha512);
+                Ok(())
+            });
+        if let Err(error) = result {
+            errors.push(error);
+        }
+    }
+    collect_cleanup_errors(workspace, &tool_downloads, &checksum_downloads, &mut errors);
 
     if &new_sha512sums != sha512sums {
         workspace.checksums.sha512sums = new_sha512sums;
         save_checksums(workspace)?;
     }
-    Ok(())
+    match errors.len() {
+        0 => Ok(()),
+        1 => Err(errors.pop().unwrap()),
+        _ => Err(err!(
+            "One or more downloads failed:\n{}",
+            errors
+                .iter()
+                .map(|error| format!("- {error:#}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )),
+    }
 }
 
 struct PlannedToolDownload<'a> {
     tool: &'a ToolConfiguration,
     url: String,
     tool_path: RelativePathBuf,
-    checksum_path: RelativePathBuf,
     temp_dir: RelativePathBuf,
     download_path: RelativePathBuf,
 }
@@ -200,36 +216,72 @@ fn process_tool_download(
         new_sha512sums.insert(download.url.clone(), sha512.clone());
     }
 
-    if adapter.file_exists(&download.tool_path)? {
-        adapter.delete_directory_all(&download.tool_path)?;
-    }
+    let staging_path = download.temp_dir.join("extracted");
     debug!("Extracting tool '{}'", download.tool.name);
     extract_tool(
         workspace,
         download.tool,
-        &download.tool_path,
+        &staging_path,
         &download.download_path,
         get_file_type_from_url(&download.url),
     )?;
-    let mut checksum_file = adapter.create_file(&download.checksum_path)?;
+    let mut checksum_file = adapter.create_file(&staging_path.join(".tool-tool.sha512"))?;
     checksum_file.write_all(sha512.as_bytes())?;
+    drop(checksum_file);
+    replace_tool_directory(
+        workspace,
+        &staging_path,
+        &download.tool_path,
+        &download.temp_dir.join("previous"),
+    )?;
     Ok(())
 }
 
-fn cleanup_temp_directories(
+fn replace_tool_directory(
+    workspace: &Workspace,
+    staging_path: &RelativePathBuf,
+    tool_path: &RelativePathBuf,
+    backup_path: &RelativePathBuf,
+) -> ToolToolResult<()> {
+    let adapter = workspace.adapter();
+    let had_previous_installation = adapter.file_exists(tool_path)?;
+    if had_previous_installation {
+        adapter.rename_path(tool_path, backup_path)?;
+    }
+
+    if let Err(install_error) = adapter.rename_path(staging_path, tool_path) {
+        if had_previous_installation
+            && let Err(rollback_error) = adapter.rename_path(backup_path, tool_path)
+        {
+            return Err(err!(
+                "Failed to install staged tool: {install_error:#}\nFailed to restore previous installation: {rollback_error:#}"
+            ));
+        }
+        return Err(install_error);
+    }
+
+    if had_previous_installation {
+        adapter.delete_directory_all(backup_path)?;
+    }
+    Ok(())
+}
+
+fn collect_cleanup_errors(
     workspace: &Workspace,
     tool_downloads: &[PlannedToolDownload<'_>],
     checksum_downloads: &[PlannedChecksumDownload],
-) -> ToolToolResult<()> {
+    errors: &mut Vec<tool_tool_base::result::ToolToolError>,
+) {
     let adapter = workspace.adapter();
     for temp_dir in tool_downloads
         .iter()
         .map(|download| &download.temp_dir)
         .chain(checksum_downloads.iter().map(|download| &download.temp_dir))
     {
-        adapter.delete_directory_all(temp_dir)?;
+        if let Err(error) = adapter.delete_directory_all(temp_dir) {
+            errors.push(error);
+        }
     }
-    Ok(())
 }
 
 fn extract_tool(
@@ -302,18 +354,22 @@ fn extract_zip(
     let mut archive = zip::ZipArchive::new(adapter.read_file(zip_path)?)?;
     let mut common_root: Option<OsString> = None;
     let mut has_top_level_file = false;
+    let mut links = Vec::new();
 
     for i in 0..archive.len() {
-        let zip_entry = archive.by_index(i)?;
+        let mut zip_entry = archive.by_index(i)?;
         let path = zip_entry
             .enclosed_name()
             .ok_or_else(|| err!("Archive contains unsafe path: '{}'", zip_entry.name()))?;
         validate_archive_path(zip_entry.name(), &path)?;
         if zip_entry.is_symlink() {
-            return Err(err!(
-                "Archive contains unsafe symbolic link: '{}'",
-                zip_entry.name()
-            ));
+            let mut target = String::new();
+            zip_entry.read_to_string(&mut target)?;
+            links.push(ArchiveLink {
+                path: path.clone(),
+                target: PathBuf::from(target),
+                hard: false,
+            });
         }
         let mut components = path.components();
         let Some(first) = components.next() else {
@@ -326,9 +382,13 @@ fn extract_zip(
             continue;
         }
         common_root.get_or_insert(first);
-        has_top_level_file |= zip_entry.is_file() && components.next().is_none();
+        has_top_level_file |= !zip_entry.is_dir() && components.next().is_none();
     }
     let strip_common_root = common_root.is_some() && !has_top_level_file;
+    let links = links
+        .into_iter()
+        .map(|link| prepare_archive_link(link, strip_common_root, destination_path))
+        .collect::<ToolToolResult<Vec<_>>>()?;
 
     for i in 0..archive.len() {
         let mut zip_entry = archive.by_index(i).unwrap();
@@ -344,7 +404,9 @@ fn extract_zip(
         }
         let relative_path_buf = components.as_relative_path();
         let joined_path = destination_path.join(relative_path_buf);
-        if zip_entry.is_dir() {
+        if zip_entry.is_symlink() {
+            continue;
+        } else if zip_entry.is_dir() {
             adapter.create_directory_all(&joined_path)?;
         } else {
             if let Some(parent_path) = joined_path.parent() {
@@ -354,6 +416,7 @@ fn extract_zip(
             std::io::copy(&mut zip_entry, &mut outfile)?;
         }
     }
+    create_archive_links(adapter, &links)?;
     Ok(())
 }
 
@@ -367,11 +430,23 @@ fn extract_tar<R: Read>(
     let mut archive = tar::Archive::new(first_pass);
     let mut common_root: Option<OsString> = None;
     let mut has_top_level_file = false;
+    let mut links = Vec::new();
 
     for archive_entry in archive.entries()? {
         let archive_entry = archive_entry?;
         let path = archive_entry.path()?;
-        validate_tar_entry(&archive_entry, &path)?;
+        validate_archive_path(&path.display().to_string(), &path)?;
+        let entry_type = archive_entry.header().entry_type();
+        if entry_type.is_symlink() || entry_type.is_hard_link() {
+            let target = archive_entry
+                .link_name()?
+                .ok_or_else(|| err!("Archive link '{}' has no target", path.display()))?;
+            links.push(ArchiveLink {
+                path: path.to_path_buf(),
+                target: target.into_owned(),
+                hard: entry_type.is_hard_link(),
+            });
+        }
         let mut components = path.components();
         let Some(first) = components.next() else {
             continue;
@@ -383,24 +458,20 @@ fn extract_tar<R: Read>(
             continue;
         }
         common_root.get_or_insert(first);
-        has_top_level_file |=
-            archive_entry.header().entry_type().is_file() && components.next().is_none();
+        has_top_level_file |= !entry_type.is_dir() && components.next().is_none();
     }
     let strip_common_root = common_root.is_some() && !has_top_level_file;
+    let links = links
+        .into_iter()
+        .map(|link| prepare_archive_link(link, strip_common_root, destination_path))
+        .collect::<ToolToolResult<Vec<_>>>()?;
 
     let mut archive = tar::Archive::new(second_pass);
     for archive_entry in archive.entries()? {
         let mut archive_entry = archive_entry?;
         let outpath = archive_entry.path()?;
-        validate_tar_entry(&archive_entry, &outpath)?;
-
-        let relative_path_buf = RelativePathBuf::from_path(outpath)?;
-        let mut components = relative_path_buf.components();
-        if strip_common_root {
-            components.next();
-        }
-        let relative_path_buf = components.as_relative_path();
-        let joined_path = destination_path.join(relative_path_buf);
+        validate_archive_path(&outpath.display().to_string(), &outpath)?;
+        let joined_path = destination_path.join(archive_output_path(&outpath, strip_common_root)?);
         match archive_entry.header().entry_type() {
             EntryType::Directory => {
                 adapter.create_directory_all(&joined_path)?;
@@ -420,6 +491,89 @@ fn extract_tar<R: Read>(
             _ => {}
         }
     }
+    create_archive_links(adapter, &links)?;
+    Ok(())
+}
+
+fn create_archive_links(
+    adapter: &dyn crate::adapter::Adapter,
+    links: &[PreparedArchiveLink],
+) -> ToolToolResult<()> {
+    for link in links {
+        if let Some(parent_path) = link.path.parent() {
+            adapter.create_directory_all(&parent_path.to_relative_path_buf())?;
+        }
+        if link.hard {
+            adapter.create_hard_link(&link.path, &link.target)?;
+        } else {
+            adapter.create_symbolic_link(&link.path, &link.target)?;
+        }
+    }
+    Ok(())
+}
+
+struct ArchiveLink {
+    path: PathBuf,
+    target: PathBuf,
+    hard: bool,
+}
+
+struct PreparedArchiveLink {
+    path: RelativePathBuf,
+    target: RelativePathBuf,
+    hard: bool,
+}
+
+fn prepare_archive_link(
+    link: ArchiveLink,
+    strip_common_root: bool,
+    destination_path: &RelativePathBuf,
+) -> ToolToolResult<PreparedArchiveLink> {
+    let path = archive_output_path(&link.path, strip_common_root)?;
+    let target = if link.hard {
+        validate_archive_path(&link.target.display().to_string(), &link.target)?;
+        destination_path.join(archive_output_path(&link.target, strip_common_root)?)
+    } else {
+        validate_symbolic_link_target(&path, &link.target)?;
+        RelativePathBuf::from_path(&link.target)?
+    };
+    Ok(PreparedArchiveLink {
+        path: destination_path.join(path),
+        target,
+        hard: link.hard,
+    })
+}
+
+fn archive_output_path(path: &Path, strip_common_root: bool) -> ToolToolResult<RelativePathBuf> {
+    let relative_path = RelativePathBuf::from_path(path)?;
+    let mut components = relative_path.components();
+    if strip_common_root {
+        components.next();
+    }
+    Ok(components.as_relative_path().to_relative_path_buf())
+}
+
+fn validate_symbolic_link_target(link_path: &RelativePathBuf, target: &Path) -> ToolToolResult<()> {
+    let mut resolved = PathBuf::from(
+        link_path
+            .parent()
+            .map(|path| path.as_str())
+            .unwrap_or_default(),
+    );
+    for component in target.components() {
+        match component {
+            Component::Normal(component) => resolved.push(component),
+            Component::CurDir => {}
+            Component::ParentDir if resolved.pop() => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(err!(
+                    "Archive link '{}' points outside the tool directory: '{}'",
+                    link_path,
+                    target.display()
+                ));
+            }
+        }
+    }
     Ok(())
 }
 
@@ -432,18 +586,6 @@ fn validate_archive_path(name: &str, path: &Path) -> ToolToolResult<()> {
     }) {
         return Err(err!("Archive contains unsafe path: '{name}'"));
     }
-    Ok(())
-}
-
-fn validate_tar_entry<R: Read>(entry: &tar::Entry<'_, R>, path: &Path) -> ToolToolResult<()> {
-    let entry_type = entry.header().entry_type();
-    if entry_type.is_symlink() || entry_type.is_hard_link() {
-        return Err(err!(
-            "Archive contains unsafe link entry: '{}'",
-            path.display()
-        ));
-    }
-    validate_archive_path(&path.display().to_string(), path)?;
     Ok(())
 }
 

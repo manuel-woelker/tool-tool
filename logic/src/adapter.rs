@@ -47,6 +47,15 @@ pub trait Adapter: Debug + 'static {
     */
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()>;
 
+    /** Create a symbolic link using a target relative to the link. */
+    fn create_symbolic_link(&self, path: &FilePath, target: &FilePath) -> ToolToolResult<()>;
+
+    /** Create a hard link to another extracted file. */
+    fn create_hard_link(&self, path: &FilePath, target: &FilePath) -> ToolToolResult<()>;
+
+    /** Rename a file or directory on the same filesystem. */
+    fn rename_path(&self, from: &FilePath, to: &FilePath) -> ToolToolResult<()>;
+
     /**
     Delete a directory (including all contained files and directories)
     the path is relative to parent directory of the tool-tool binary
@@ -66,11 +75,14 @@ pub trait Adapter: Debug + 'static {
     /**
     Download multiple files. Implementations may run transfers concurrently.
     */
-    fn download_files(&self, requests: &[DownloadRequest]) -> ToolToolResult<()> {
-        for request in requests {
-            self.download_file(&request.url, &request.destination_path)?;
-        }
-        Ok(())
+    fn download_files(
+        &self,
+        requests: &[DownloadRequest],
+    ) -> ToolToolResult<Vec<ToolToolResult<()>>> {
+        Ok(requests
+            .iter()
+            .map(|request| self.download_file(&request.url, &request.destination_path))
+            .collect())
     }
 
     /**

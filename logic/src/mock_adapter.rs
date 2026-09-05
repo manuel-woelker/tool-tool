@@ -27,6 +27,7 @@ struct MockAdapterInner {
     now: Duration,
     now_increment: Duration,
     is_locked: bool,
+    rename_failure: Option<FilePath>,
     lock_results: Vec<bool>,
 }
 
@@ -73,6 +74,7 @@ impl MockAdapter {
                 now_increment: Duration::from_secs(0),
                 lock_results: Vec::new(),
                 is_locked: false,
+                rename_failure: None,
             })),
         }
     }
@@ -139,6 +141,14 @@ impl MockAdapter {
         self.write().lock_results = lock_results;
     }
 
+    pub fn fail_rename_from(&self, path: impl Into<FilePath>) {
+        self.write().rename_failure = Some(path.into());
+    }
+
+    pub fn get_file(&self, path: impl Into<FilePath>) -> Option<Vec<u8>> {
+        self.read().file_map.get(&path.into()).cloned()
+    }
+
     #[allow(dead_code)]
     pub fn get_effects(&self) -> String {
         self.read().effects_string.clone()
@@ -173,7 +183,11 @@ impl Adapter for MockAdapter {
     fn file_exists(&self, path: &FilePath) -> ToolToolResult<bool> {
         self.assert_locked();
         self.log_effect(format!("FILE EXISTS?: {}", path));
-        Ok(self.read().file_map.contains_key(path))
+        Ok(self
+            .read()
+            .file_map
+            .keys()
+            .any(|existing_path| existing_path == path || existing_path.starts_with(path)))
     }
 
     fn read_file(&self, path: &FilePath) -> ToolToolResult<Box<dyn ReadSeek>> {
@@ -197,6 +211,40 @@ impl Adapter for MockAdapter {
     fn create_directory_all(&self, path: &FilePath) -> ToolToolResult<()> {
         self.assert_locked();
         self.log_effect(format!("CREATE DIR: {path}"));
+        Ok(())
+    }
+
+    fn create_symbolic_link(&self, path: &FilePath, target: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked();
+        self.log_effect(format!("CREATE SYMLINK: {path} -> {target}"));
+        Ok(())
+    }
+
+    fn create_hard_link(&self, path: &FilePath, target: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked();
+        self.log_effect(format!("CREATE HARD LINK: {path} -> {target}"));
+        Ok(())
+    }
+
+    fn rename_path(&self, from: &FilePath, to: &FilePath) -> ToolToolResult<()> {
+        self.assert_locked();
+        self.log_effect(format!("RENAME: {from} -> {to}"));
+        if self.read().rename_failure.as_ref() == Some(from) {
+            return Err(err!("Configured rename failure for '{from}'"));
+        }
+        let moved_files = self
+            .read()
+            .file_map
+            .iter()
+            .filter_map(|(path, content)| {
+                path.strip_prefix(from)
+                    .ok()
+                    .map(|suffix| (to.join(suffix), content.clone()))
+            })
+            .collect::<Vec<_>>();
+        let mut inner = self.write();
+        inner.file_map.retain(|path, _| !path.starts_with(from));
+        inner.file_map.extend(moved_files);
         Ok(())
     }
 
