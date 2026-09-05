@@ -64,6 +64,16 @@ pub trait Adapter: Debug + 'static {
     fn download_file(&self, url: &str, destination_path: &FilePath) -> ToolToolResult<()>;
 
     /**
+    Download multiple files. Implementations may run transfers concurrently.
+    */
+    fn download_files(&self, requests: &[DownloadRequest]) -> ToolToolResult<()> {
+        for request in requests {
+            self.download_file(&request.url, &request.destination_path)?;
+        }
+        Ok(())
+    }
+
+    /**
         Get the currently running platform
     */
     fn get_platform(&self) -> DownloadPlatform;
@@ -118,4 +128,10 @@ pub struct ExecutionRequest {
     pub binary_path: FilePath,
     pub args: Vec<String>,
     pub env: Env,
+}
+
+#[derive(Debug, Clone)]
+pub struct DownloadRequest {
+    pub url: String,
+    pub destination_path: FilePath,
 }

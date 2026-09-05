@@ -1,5 +1,8 @@
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tool_tool_base::result::{Context, ToolToolResult};
 use ureq::tls::{RootCerts, TlsConfig};
 
@@ -8,7 +11,14 @@ pub struct Downloader {
     show_progress: bool,
 }
 
+const QUEUED_TEMPLATE: &str =
+    "{spinner:.dim} {prefix:<11} {msg:40!}  {'':32}  {'':21}  {'':12}  {'':8}";
+const DOWNLOAD_TEMPLATE: &str = "{spinner:.green} {prefix:<11} {msg:40!}  [{bar:30.cyan/blue}]  {bytes:>10}/{total_bytes:<10}  {bytes_per_sec:>12}  {eta:>8}";
+const UNKNOWN_LENGTH_TEMPLATE: &str = "{spinner:.green} {prefix:<11} {msg:40!}  {'':32}  {bytes:>10}/{'':10}  {bytes_per_sec:>12}  {'':8}";
+
 impl Downloader {
+    const MAX_CONCURRENT_DOWNLOADS: usize = 4;
+
     pub fn new(show_progress: bool) -> Self {
         let agent = ureq::config::Config::builder()
             .tls_config(
@@ -25,21 +35,97 @@ impl Downloader {
         }
     }
 
-    pub fn download(&self, url: &str, destination_path: &std::path::Path) -> ToolToolResult<()> {
-        (|| -> ToolToolResult<()> {
-            let response = self.agent.get(url).call()?;
-            let content_length = response.body().content_length();
-            let mut reader = response.into_body().into_reader();
-            let mut output_file = std::fs::File::create(destination_path)?;
-            if self.show_progress {
-                copy_with_progress(url, content_length, &mut reader, &mut output_file)?;
-            } else {
-                std::io::copy(&mut reader, &mut output_file)?;
-            }
-            Ok(())
-        })()
-        .with_context(|| format!("Failed to download '{url}' to '{destination_path:?}'"))
+    pub fn download(&self, url: &str, destination_path: &Path) -> ToolToolResult<()> {
+        self.download_files(&[(url.to_string(), destination_path.to_path_buf())])
     }
+
+    pub fn download_files(&self, requests: &[(String, PathBuf)]) -> ToolToolResult<()> {
+        if requests.is_empty() {
+            return Ok(());
+        }
+
+        let multi_progress = MultiProgress::new();
+        let progress_bars = requests
+            .iter()
+            .map(|(url, _)| {
+                if self.show_progress {
+                    Ok(Some(create_queued_progress(&multi_progress, url)?))
+                } else {
+                    Ok(None)
+                }
+            })
+            .collect::<ToolToolResult<Vec<_>>>()?;
+        let next_request = AtomicUsize::new(0);
+        let errors = Mutex::new(Vec::new());
+        let worker_count = requests.len().min(Self::MAX_CONCURRENT_DOWNLOADS);
+
+        std::thread::scope(|scope| {
+            for _ in 0..worker_count {
+                scope.spawn(|| {
+                    loop {
+                        let index = next_request.fetch_add(1, Ordering::Relaxed);
+                        let Some((url, destination_path)) = requests.get(index) else {
+                            break;
+                        };
+                        if let Err(error) = download_one(
+                            &self.agent,
+                            url,
+                            destination_path,
+                            progress_bars[index].as_ref(),
+                        ) {
+                            errors.lock().unwrap().push((index, error));
+                        }
+                    }
+                });
+            }
+        });
+
+        if self.show_progress {
+            multi_progress.clear()?;
+        }
+        let mut errors = errors.into_inner().unwrap();
+        errors.sort_by_key(|(index, _)| *index);
+        if let Some((_, error)) = errors.into_iter().next() {
+            return Err(error);
+        }
+        Ok(())
+    }
+}
+
+fn download_one(
+    agent: &ureq::Agent,
+    url: &str,
+    destination_path: &Path,
+    progress: Option<&ProgressBar>,
+) -> ToolToolResult<()> {
+    let result = (|| -> ToolToolResult<()> {
+        if let Some(progress) = progress {
+            activate_progress(progress, None)?;
+        }
+        let response = agent.get(url).call()?;
+        let content_length = response.body().content_length();
+        let mut reader = response.into_body().into_reader();
+        let mut output_file = std::fs::File::create(destination_path)?;
+        if let Some(progress) = progress {
+            activate_progress(progress, content_length)?;
+            copy_with_progress(progress, &mut reader, &mut output_file)?;
+        } else {
+            std::io::copy(&mut reader, &mut output_file)?;
+        }
+        Ok(())
+    })()
+    .with_context(|| format!("Failed to download '{url}' to '{destination_path:?}'"));
+
+    if let Some(progress) = progress {
+        if result.is_ok() {
+            progress.set_prefix("done");
+            progress.finish();
+        } else {
+            progress.set_prefix("failed");
+            progress.abandon();
+        }
+    }
+    result
 }
 
 impl Default for Downloader {
@@ -48,50 +134,43 @@ impl Default for Downloader {
     }
 }
 
-fn copy_with_progress(
+fn create_queued_progress(
+    multi_progress: &MultiProgress,
     url: &str,
-    content_length: Option<u64>,
+) -> ToolToolResult<ProgressBar> {
+    let progress = multi_progress.add(ProgressBar::new_spinner());
+    progress.set_style(ProgressStyle::with_template(QUEUED_TEMPLATE)?);
+    progress.set_prefix("queued");
+    progress.set_message(download_name(url));
+    Ok(progress)
+}
+
+fn activate_progress(progress: &ProgressBar, content_length: Option<u64>) -> ToolToolResult<()> {
+    if let Some(length) = content_length {
+        progress.set_length(length);
+        progress.set_style(ProgressStyle::with_template(DOWNLOAD_TEMPLATE)?);
+    } else {
+        progress.set_style(ProgressStyle::with_template(UNKNOWN_LENGTH_TEMPLATE)?);
+    }
+    progress.set_prefix("downloading");
+    progress.enable_steady_tick(std::time::Duration::from_millis(100));
+    Ok(())
+}
+
+fn copy_with_progress(
+    progress: &ProgressBar,
     reader: &mut impl Read,
     writer: &mut impl Write,
 ) -> ToolToolResult<()> {
-    let progress = match content_length {
-        Some(length) => {
-            let progress = ProgressBar::new(length);
-            progress.set_style(ProgressStyle::with_template(
-                "{spinner:.green} {msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} {bytes_per_sec} ETA {eta}",
-            )?);
-            progress
+    let mut buffer = [0; 64 * 1024];
+    loop {
+        let bytes_read = reader.read(&mut buffer)?;
+        if bytes_read == 0 {
+            break;
         }
-        None => {
-            let progress = ProgressBar::new_spinner();
-            progress.set_style(ProgressStyle::with_template(
-                "{spinner:.green} {msg} {bytes} {bytes_per_sec}",
-            )?);
-            progress
-        }
-    };
-    progress.set_message(download_name(url));
-    progress.enable_steady_tick(std::time::Duration::from_millis(100));
-
-    let result = (|| -> std::io::Result<()> {
-        let mut buffer = [0; 64 * 1024];
-        loop {
-            let bytes_read = reader.read(&mut buffer)?;
-            if bytes_read == 0 {
-                break;
-            }
-            writer.write_all(&buffer[..bytes_read])?;
-            progress.inc(bytes_read as u64);
-        }
-        Ok(())
-    })();
-
-    if result.is_ok() {
-        progress.finish_and_clear();
-    } else {
-        progress.abandon();
+        writer.write_all(&buffer[..bytes_read])?;
+        progress.inc(bytes_read as u64);
     }
-    result?;
     Ok(())
 }
 
@@ -111,6 +190,7 @@ mod tests {
     use httpmock::Method::GET;
     use httpmock::MockServer;
     use std::path::PathBuf;
+    use std::time::{Duration, Instant};
     use test_temp_dir::{TestTempDir, test_temp_dir};
 
     struct TestContext {
@@ -164,12 +244,54 @@ mod tests {
     }
 
     #[test]
+    fn test_download_files_in_parallel() {
+        let temp_dir = test_temp_dir!();
+        let server = MockServer::start();
+        let download = server.mock(|when, then| {
+            when.method(GET).path("/slow-download");
+            then.status(200)
+                .delay(Duration::from_millis(300))
+                .body("download content");
+        });
+        let requests = (0..6)
+            .map(|index| {
+                (
+                    server.url("/slow-download"),
+                    temp_dir
+                        .used_by(|path| path.join(format!("download-{index}")))
+                        .to_path_buf(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let started = Instant::now();
+        Downloader::new(false).download_files(&requests).unwrap();
+
+        assert!(
+            started.elapsed() < Duration::from_millis(1_300),
+            "downloads did not overlap: {:?}",
+            started.elapsed()
+        );
+        download.assert_hits(6);
+        for (_, path) in requests {
+            assert_eq!(std::fs::read_to_string(path).unwrap(), "download content");
+        }
+    }
+
+    #[test]
     fn test_download_name() {
         assert_eq!(
             download_name("https://example.com/releases/tool.tar.gz?token=secret"),
             "tool.tar.gz"
         );
         assert_eq!(download_name("https://example.com/"), "download");
+    }
+
+    #[test]
+    fn progress_table_templates_are_valid() {
+        for template in [QUEUED_TEMPLATE, DOWNLOAD_TEMPLATE, UNKNOWN_LENGTH_TEMPLATE] {
+            ProgressStyle::with_template(template).unwrap();
+        }
     }
 
     #[test]

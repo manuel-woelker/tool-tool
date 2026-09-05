@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tool_tool_base::result::{Context, ToolToolResult, bail, err};
-use tool_tool_logic::adapter::{Adapter, ExecutionRequest, ReadSeek};
+use tool_tool_logic::adapter::{Adapter, DownloadRequest, ExecutionRequest, ReadSeek};
 use tool_tool_logic::configuration::platform::DownloadPlatform;
 use tool_tool_logic::types::{EnvPair, FilePath};
 
@@ -107,6 +107,20 @@ impl Adapter for RealAdapter {
         self.downloader
             .download(url, &self.resolve_path(destination_path)?)?;
         Ok(())
+    }
+
+    fn download_files(&self, requests: &[DownloadRequest]) -> ToolToolResult<()> {
+        self.assert_locked()?;
+        let requests = requests
+            .iter()
+            .map(|request| {
+                Ok((
+                    request.url.clone(),
+                    self.resolve_path(&request.destination_path)?,
+                ))
+            })
+            .collect::<ToolToolResult<Vec<_>>>()?;
+        self.downloader.download_files(&requests)
     }
 
     fn get_platform(&self) -> DownloadPlatform {
