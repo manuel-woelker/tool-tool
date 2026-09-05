@@ -243,7 +243,31 @@ fn extract_tool(
             extract_zip(workspace, download_path, tool_path)?;
         }
         FileType::TarGz => {
-            extract_targz(workspace, download_path, tool_path)?;
+            let adapter = workspace.adapter();
+            extract_tar(
+                workspace,
+                tool_path,
+                GzDecoder::new(adapter.read_file(download_path)?),
+                GzDecoder::new(adapter.read_file(download_path)?),
+            )?;
+        }
+        FileType::TarXz => {
+            let adapter = workspace.adapter();
+            extract_tar(
+                workspace,
+                tool_path,
+                liblzma::read::XzDecoder::new(adapter.read_file(download_path)?),
+                liblzma::read::XzDecoder::new(adapter.read_file(download_path)?),
+            )?;
+        }
+        FileType::TarZstd => {
+            let adapter = workspace.adapter();
+            extract_tar(
+                workspace,
+                tool_path,
+                zstd::stream::read::Decoder::new(adapter.read_file(download_path)?)?,
+                zstd::stream::read::Decoder::new(adapter.read_file(download_path)?)?,
+            )?;
         }
         FileType::Exe => {
             extract_exe(
@@ -326,13 +350,14 @@ fn extract_zip(
     Ok(())
 }
 
-fn extract_targz(
+fn extract_tar<R: Read>(
     workspace: &Workspace,
-    targz_path: &RelativePathBuf,
     destination_path: &RelativePathBuf,
+    first_pass: R,
+    second_pass: R,
 ) -> ToolToolResult<()> {
     let adapter = workspace.adapter();
-    let mut archive = tar::Archive::new(GzDecoder::new(adapter.read_file(targz_path)?));
+    let mut archive = tar::Archive::new(first_pass);
     let mut common_root: Option<OsString> = None;
     let mut has_top_level_file = false;
 
@@ -355,7 +380,7 @@ fn extract_targz(
     }
     let strip_common_root = common_root.is_some() && !has_top_level_file;
 
-    let mut archive = tar::Archive::new(GzDecoder::new(adapter.read_file(targz_path)?));
+    let mut archive = tar::Archive::new(second_pass);
     for archive_entry in archive.entries()? {
         let mut archive_entry = archive_entry?;
         let outpath = archive_entry.path()?;

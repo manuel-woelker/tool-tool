@@ -96,7 +96,7 @@ tools {
 }
 ```
 
-Download keys are `linux`, `windows`, `darwin`, or `default`. URLs without an archive extension are installed as a single executable named after the tool; `.exe`, `.zip`, and `.tar.gz` are also supported. Zip and tar.gz archives with one shared wrapper directory have that directory removed during extraction.
+Download keys are `linux`, `windows`, `darwin`, or `default`. URLs without an archive extension are installed as a single executable named after the tool; `.exe`, `.zip`, `.tar.gz`, `.tar.xz`, `.tar.zstd`, and `.tar.zst` are also supported. Archives with one shared wrapper directory have that directory removed during extraction.
 
 Each command value is a shell-like command string relative to the extracted tool directory. Its first token is the executable; remaining tokens are fixed arguments. `description` is optional. User arguments follow the fixed arguments.
 

@@ -271,6 +271,8 @@ mod tests {
     use crate::test_util::targz_builder::TarGzBuilder;
     use crate::test_util::zip_builder::ZipBuilder;
     use expect_test::expect;
+    use flate2::read::GzDecoder;
+    use std::io::{Cursor, Read, Write};
     use std::time::Duration;
     use tool_tool_base::result::ToolToolResult;
 
@@ -318,6 +320,22 @@ mod tests {
 
     fn build_test_targz() -> ToolToolResult<Vec<u8>> {
         build_archive::<TarGzBuilder>()
+    }
+
+    fn build_test_tar() -> ToolToolResult<Vec<u8>> {
+        let mut tar = Vec::new();
+        GzDecoder::new(Cursor::new(build_test_targz()?)).read_to_end(&mut tar)?;
+        Ok(tar)
+    }
+
+    fn build_test_tar_xz() -> ToolToolResult<Vec<u8>> {
+        let mut encoder = liblzma::write::XzEncoder::new(Vec::new(), 6);
+        encoder.write_all(&build_test_tar()?)?;
+        Ok(encoder.finish()?)
+    }
+
+    fn build_test_tar_zstd() -> ToolToolResult<Vec<u8>> {
+        Ok(zstd::stream::encode_all(Cursor::new(build_test_tar()?), 0)?)
     }
 
     fn build_archive<T: ArchiveBuilder>() -> ToolToolResult<Vec<u8>> {
@@ -691,6 +709,47 @@ mod tests {
             UNLOCK
         "#]]);
         Ok(())
+    }
+
+    fn verify_compressed_tar_download(url: &str, archive: Vec<u8>) -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_configuration(&format!(
+            r#"
+                tools {{
+                    test "1.0.0" {{
+                        download {{ linux "{url}" }}
+                        commands {{ test "tooly.exe" }}
+                    }}
+                }}
+            "#
+        ));
+        adapter.set_url(url, archive);
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+
+        runner.run();
+
+        let effects = adapter.get_effects();
+        assert!(effects.contains("CREATE FILE: .tool-tool/v2/cache/test-1.0.0-linux/foo"));
+        assert!(effects.contains("CREATE FILE: .tool-tool/v2/cache/test-1.0.0-linux/fizz/buzz"));
+        assert!(!effects.contains("EXIT: 1"));
+        Ok(())
+    }
+
+    #[test]
+    fn download_tar_xz() -> ToolToolResult<()> {
+        verify_compressed_tar_download(
+            "https://example.com/test-1.0.0.tar.xz",
+            build_test_tar_xz()?,
+        )
+    }
+
+    #[test]
+    fn download_tar_zstd() -> ToolToolResult<()> {
+        verify_compressed_tar_download(
+            "https://example.com/test-1.0.0.tar.zstd",
+            build_test_tar_zstd()?,
+        )
     }
 
     #[test]

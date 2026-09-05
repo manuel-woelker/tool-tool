@@ -2411,6 +2411,7 @@ dependencies = [
  "flate2",
  "indent",
  "kdl",
+ "liblzma",
  "miette",
  "relative-path",
  "sha2",
@@ -2419,6 +2420,7 @@ dependencies = [
  "tool-tool-base",
  "tracing",
  "zip",
+ "zstd",
 ]
 
 [[package]]

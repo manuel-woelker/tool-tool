@@ -2,6 +2,8 @@
 pub enum FileType {
     Zip,
     TarGz,
+    TarXz,
+    TarZstd,
     Exe,
     None,
     Unknown,
@@ -28,6 +30,10 @@ pub fn get_file_type_from_url(url: &str) -> FileType {
         FileType::Zip
     } else if filename.ends_with(".tar.gz") {
         FileType::TarGz
+    } else if filename.ends_with(".tar.xz") {
+        FileType::TarXz
+    } else if filename.ends_with(".tar.zstd") || filename.ends_with(".tar.zst") {
+        FileType::TarZstd
     } else if filename.ends_with(".tar") {
         FileType::None
     } else {
@@ -51,6 +57,18 @@ mod tests {
         assert_eq!(
             get_file_type_from_url("https://example.com/file.tar.gz"),
             FileType::TarGz
+        );
+        assert_eq!(
+            get_file_type_from_url("https://example.com/file.tar.xz"),
+            FileType::TarXz
+        );
+        assert_eq!(
+            get_file_type_from_url("https://example.com/file.tar.zstd"),
+            FileType::TarZstd
+        );
+        assert_eq!(
+            get_file_type_from_url("https://example.com/file.tar.zst"),
+            FileType::TarZstd
         );
         assert_eq!(
             get_file_type_from_url("https://example.com/file.zip"),
