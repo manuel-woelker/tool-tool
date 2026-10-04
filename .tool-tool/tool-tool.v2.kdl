@@ -99,4 +99,21 @@ tools {
 			JAVA_HOME "${dir:java}${macos:/Contents/Home}"
 		}
 	}
+	// https://github.com/jgraph/drawio-desktop/releases
+	drawio "31.7.0" {
+		download {
+			linux "https://github.com/jgraph/drawio-desktop/releases/download/v${version}/drawio-x86_64-${version}.AppImage"
+		}
+		commands {
+			drawio "drawio.AppImage"
+		}
+		env {
+			APPIMAGE_EXTRACT_AND_RUN "1"
+			DISPLAY "${env:DISPLAY}"
+			WAYLAND_DISPLAY "${env:WAYLAND_DISPLAY}"
+			XAUTHORITY "${env:XAUTHORITY}"
+			XDG_RUNTIME_DIR "${env:XDG_RUNTIME_DIR}"
+			DBUS_SESSION_BUS_ADDRESS "${env:DBUS_SESSION_BUS_ADDRESS}"
+		}
+	}
 }

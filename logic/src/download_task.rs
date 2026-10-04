@@ -339,7 +339,11 @@ fn extract_tool(
             ));
         }
         FileType::Other(extension) => {
-            return Err(err!("Unsupported file extension: '{}'", extension));
+            extract_exe(
+                workspace,
+                download_path,
+                &tool_path.join(format!("{}.{}", tool.name, extension)),
+            )?;
         }
     }
     Ok(())

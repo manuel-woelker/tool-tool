@@ -967,6 +967,50 @@ mod tests {
     }
 
     #[test]
+    fn downloads_and_runs_executable_with_other_extension() -> ToolToolResult<()> {
+        let (runner, adapter) = setup();
+        adapter.set_configuration(
+            r#"
+                tools {
+                    drawio "31.7.0" {
+                        download {
+                            linux "https://example.com/drawio-x86_64-31.7.0.AppImage"
+                        }
+                        commands { drawio "drawio.AppImage" }
+                    }
+                }
+            "#,
+        );
+        adapter.set_url(
+            "https://example.com/drawio-x86_64-31.7.0.AppImage",
+            b"appimage".to_vec(),
+        );
+        adapter.set_platform(DownloadPlatform::Linux);
+        adapter.set_args(&["--download"]);
+        runner.run();
+
+        let download_effects = adapter.get_effects();
+        assert!(download_effects.contains(
+            "CREATE FILE: .tool-tool/v2/cache/tmp/drawio-rand-0/extracted/drawio.AppImage"
+        ));
+        assert!(download_effects.contains(
+            "MAKE EXECUTABLE: .tool-tool/v2/cache/tmp/drawio-rand-0/extracted/drawio.AppImage"
+        ));
+
+        adapter.clear_effects();
+        adapter.set_args(&["drawio", "--version"]);
+        runner.run();
+
+        let command_effects = adapter.get_effects();
+        assert!(
+            command_effects
+                .contains("EXECUTE: .tool-tool/v2/cache/drawio-31.7.0-linux/drawio.AppImage")
+        );
+        assert!(command_effects.contains("\tARG: --version"));
+        Ok(())
+    }
+
+    #[test]
     fn preserves_successful_downloads_when_other_downloads_fail() -> ToolToolResult<()> {
         let (runner, adapter) = setup();
         adapter.set_configuration(

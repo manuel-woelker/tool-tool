@@ -37,7 +37,7 @@ pub fn get_file_type_from_url(url: &str) -> FileType {
     } else if filename.ends_with(".tar") {
         FileType::None
     } else {
-        let Some((_, extension)) = filename.split_once('.') else {
+        let Some((_, extension)) = filename.rsplit_once('.') else {
             return FileType::None;
         };
         FileType::Other(extension.to_string())
@@ -84,7 +84,7 @@ mod tests {
         );
         assert_eq!(
             get_file_type_from_url("https://example.com/file.tar.bzip2"),
-            FileType::Other("tar.bzip2".to_string())
+            FileType::Other("bzip2".to_string())
         );
 
         assert_eq!(
@@ -101,7 +101,7 @@ mod tests {
         );
         assert_eq!(
             get_file_type_from_url("https://example.com/file.tar.bzip2?foo=bar/x.zip"),
-            FileType::Other("tar.bzip2".to_string())
+            FileType::Other("bzip2".to_string())
         );
     }
 }
