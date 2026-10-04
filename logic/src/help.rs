@@ -109,7 +109,8 @@ Configured `env` values are passed to the command. Commands otherwise run with a
 - `${base_path}`: project root.
 - `${linux:text}`, `${windows:text}`, `${darwin:text}`: include `text` only on that platform.
 - `${cmd:command-name}`: expanded command string of another configured command.
-- `${env:NAME}`: value of an environment variable visible to tool-tool.
+- `${env:NAME}`: required environment variable visible to tool-tool.
+- `${env:NAME|fallback}`: environment variable, or `fallback` when undefined or empty. The fallback may be empty.
 
 Use `tool-tool --validate` after editing configuration and `tool-tool --expand-config` to inspect template results."#,
     );

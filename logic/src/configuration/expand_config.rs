@@ -73,12 +73,22 @@ fn create_expander<'a>(
     });
     expander.add_replace_fn("env", move |substitution| {
         let arg = &substitution.arguments[0];
+        let (name, fallback) = arg
+            .split_once('|')
+            .map_or((arg.as_str(), None), |(name, fallback)| {
+                (name, Some(fallback))
+            });
         let env = adapter.env();
-        let (_, value) = env
+        if let Some((_, value)) = env
             .iter()
-            .find(|(name, _)| name == arg)
-            .ok_or_else(|| err!("Could not find environment variable '{}'", arg))?;
-        Ok(value.clone())
+            .find(|(variable_name, value)| variable_name == name && !value.is_empty())
+        {
+            Ok(value.clone())
+        } else if let Some(fallback) = fallback {
+            Ok(fallback.to_string())
+        } else {
+            Err(err!("Could not find environment variable '{}'", name))
+        }
     });
 
     expander
@@ -220,6 +230,56 @@ mod tests {
         assert_eq!(
             config.tools[0].commands[0].command_string,
             "<base_path>/.cache/tools/pnpm-12.2.1-linux/bin/pnpm"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn expands_environment_fallbacks() -> ToolToolResult<()> {
+        let adapter = MockAdapter::new();
+        adapter.add_env("DEFINED", "value");
+        adapter.add_env("EMPTY", "");
+        let mut config = parse_configuration_from_kdl(
+            CONFIGURATION_FILE_NAME,
+            r#"
+                tools {
+                    test "1.0.0" {
+                        env {
+                            DEFINED "${env:DEFINED|fallback}"
+                            MISSING "${env:MISSING|https://example.com:8443/path}"
+                            EMPTY "${env:EMPTY|fallback}"
+                            OPTIONAL "${env:OPTIONAL|}"
+                        }
+                    }
+                }
+            "#,
+        )?;
+
+        expand_configuration_template_expressions(&mut config, &adapter)?;
+
+        assert_eq!(config.tools[0].env[0].value, "value");
+        assert_eq!(
+            config.tools[0].env[1].value,
+            "https://example.com:8443/path"
+        );
+        assert_eq!(config.tools[0].env[2].value, "fallback");
+        assert_eq!(config.tools[0].env[3].value, "");
+        Ok(())
+    }
+
+    #[test]
+    fn missing_environment_variable_without_fallback_is_an_error() -> ToolToolResult<()> {
+        let adapter = MockAdapter::new();
+        let mut config = parse_configuration_from_kdl(
+            CONFIGURATION_FILE_NAME,
+            r#"tools { test "1.0.0" { env { REQUIRED "${env:REQUIRED}" } } }"#,
+        )?;
+
+        let error = expand_configuration_template_expressions(&mut config, &adapter).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Could not find environment variable 'REQUIRED'"
         );
         Ok(())
     }
